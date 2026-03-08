@@ -1,10 +1,10 @@
 # Claude Compact Guard
 
-**Never lose context again.** Comprehensive work state preservation for Claude Code's auto-compaction.
+**Never lose context again.** A comprehensive context continuity system for Claude Code.
 
-When Claude Code compacts your conversation (at ~95% context usage), it compresses your entire chat history into a summary. This often loses critical details: which files you were editing, what you were debugging, your build state, uncommitted changes, and the overall "where we were."
+When Claude Code compacts your conversation (at ~95% context usage), it compresses your entire chat history into a summary. This loses critical details: which files you were editing, what you were debugging, your build state, uncommitted changes, and the overall "where we were."
 
-Compact Guard captures a structured snapshot of your **entire work state** — not just git, but disk, environment, build artifacts, and Claude's own ecosystem — right before compaction happens, and automatically restores it afterward.
+Compact Guard is not just a hook — it is a **multi-layered context preservation system**: hooks capture state, skills give manual control, an agent handles intelligent recovery, and worktree awareness preserves parallel work.
 
 ## The Problem
 
@@ -15,89 +15,100 @@ Claude: *edits 3 files, runs tests, debugging a failing case*
 Claude: "I see we're working on a project. How can I help?"
 ```
 
-Context compaction is lossy. The compressed summary captures broad strokes but drops:
-- Exact files being edited and their modification state
-- Build status and recent artifact ages
-- Untracked files (potential in-progress work)
-- Environment variables affecting the build
-- The debugging trail and hypotheses being tested
-
-## How It Works
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Claude Code Session                    │
-│                                                          │
-│  Context fills up → Auto-compact triggers                │
-│       │                                                  │
-│       ▼                                                  │
-│  ┌──────────────────┐                                    │
-│  │  PreCompact Hook  │ ◄── compact-guard-pre.sh          │
-│  │  Captures:        │                                   │
-│  │  • Git state      │     Writes structured             │
-│  │  • Disk state     │──── snapshot to                   │
-│  │  • Build health   │     ~/.claude/compact-guard/      │
-│  │  • Environment    │                                   │
-│  │  • Claude memory  │     Injects systemMessage         │
-│  │                   │──── into compaction summary       │
-│  └──────────────────┘                                    │
-│       │                                                  │
-│       ▼                                                  │
-│  ┌──────────────────┐                                    │
-│  │  Compaction       │ Context compressed to summary     │
-│  │  (built-in)       │ systemMessage survives!           │
-│  └──────────────────┘                                    │
-│       │                                                  │
-│       ▼                                                  │
-│  ┌──────────────────┐                                    │
-│  │  SessionStart     │ ◄── compact-guard-post.sh         │
-│  │  Hook             │     (called from session-start)   │
-│  │                   │                                   │
-│  │  Detects recent   │     Injects snapshot path         │
-│  │  snapshot (<15m)  │──── as additionalContext           │
-│  │                   │                                   │
-│  │  Claude reads     │     Full state restored           │
-│  │  snapshot file    │──── from structured markdown      │
-│  └──────────────────┘                                    │
-│                                                          │
-│  Claude: "I see we were debugging the auth bug in        │
-│   user-service.ts, with 3 uncommitted files..."          │
-└─────────────────────────────────────────────────────────┘
+                    ┌─────────────────────────────┐
+                    │      Claude Code Session      │
+                    └──────────────┬──────────────┘
+                                   │
+            ┌──────────────────────┼──────────────────────┐
+            │                      │                      │
+            ▼                      ▼                      ▼
+    ┌───────────────┐    ┌─────────────────┐    ┌─────────────────┐
+    │   4 Hooks      │    │   3 Skills       │    │   1 Agent       │
+    │                │    │                  │    │                 │
+    │ PreCompact     │    │ /cg-snapshot     │    │ context-keeper  │
+    │   → snapshot   │    │   manual save    │    │   intelligent   │
+    │                │    │                  │    │   recovery &    │
+    │ SessionStart   │    │ /cg-restore      │    │   analysis      │
+    │   → recovery   │    │   manual load    │    │                 │
+    │                │    │                  │    │                 │
+    │ Stop           │    │ /cg-context-     │    │                 │
+    │   → bookmark   │    │   status         │    │                 │
+    │                │    │   health check   │    │                 │
+    │ (lib: shared)  │    │                  │    │                 │
+    └───────┬───────┘    └────────┬─────────┘    └────────┬────────┘
+            │                     │                       │
+            └─────────────────────┼───────────────────────┘
+                                  │
+                    ┌─────────────▼──────────────┐
+                    │  ~/.claude/compact-guard/   │
+                    │                             │
+                    │  snapshot-*.md   (auto)     │
+                    │  session-bookmark.md        │
+                    │  latest.md      (pointer)   │
+                    └─────────────────────────────┘
 ```
+
+## Components
+
+### Hooks (automatic)
+
+| Hook | Event | What It Does |
+|------|-------|-------------|
+| `compact-guard-pre.sh` | PreCompact | Captures 5-section snapshot + injects systemMessage |
+| `compact-guard-post.sh` | SessionStart | Detects recent snapshot, injects recovery context |
+| `compact-guard-stop.sh` | Stop | Saves session bookmark for next session continuity |
+| `compact-guard-lib.sh` | (shared) | Git, worktree, domain, snapshot, JSON functions |
+
+### Skills (manual control)
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/cg-snapshot` | Before risky changes | Manual checkpoint — save state on demand |
+| `/cg-restore` | After context loss | Read and summarize latest snapshot |
+| `/cg-context-status` | Anytime | Health dashboard — snapshots, hooks, settings |
+
+### Agent
+
+| Agent | Purpose |
+|-------|---------|
+| `context-keeper` | Intelligent recovery — reads snapshot, cross-references git, produces structured briefing |
+
+### Rules (hookify-compatible)
+
+| Rule | Action | Purpose |
+|------|--------|---------|
+| `protect-snapshots` | block | Prevent accidental snapshot edits |
+| `protect-compact-guard-hooks` | block | Edit source, not installed hooks |
 
 ## What Gets Captured
 
 ### 1. Git State
-| Data | Description |
-|------|-------------|
-| Branch & last commit | Current working branch and HEAD |
-| Modified files | All uncommitted changes with status |
-| Staged files | Files ready for commit |
-| Diff stat | Lines added/removed per file |
-| Untracked files | New files not yet in git (in-progress work) |
-| Recent commits | Last 8 commits for context |
-| Active branches | All local branches (parallel work) |
-| Domain breakdown | Changes classified by domain (core, ui, build, etc.) |
+- Branch, last commit, modified/staged/untracked files
+- Diff statistics (lines added/removed per file)
+- Recent commits (last 8) and active branches
+- **Domain classification** — changes sorted by domain (core, ui, build, ci, docs, scripts, test, config)
 
 ### 2. Disk State (beyond git)
-| Data | Description |
-|------|-------------|
-| Recently modified files | Files changed since last commit (via `find`, not git) |
-| Build directory | Which build dir exists (dev/debug/release) |
-| Build artifacts | Most recent .exe/.dll/.o and their age |
-| Project size | Total disk usage |
+- Recently modified files via `find` (not just git-tracked)
+- Build directory status and artifact ages
+- Project disk usage
 
-### 3. Environment
-| Data | Description |
-|------|-------------|
-| Platform & shell | OS and shell info |
-| Key env vars | VCPKG_ROOT, CMAKE_PREFIX_PATH, etc. |
-| Git stashes | Stashed work that might be forgotten |
+### 3. Worktrees
+- Active worktree list with branches
+- Per-worktree dirty state (uncommitted files in each worktree)
+- Worktree detection (`.git` file vs directory)
 
-### 4. Claude Ecosystem
-| Data | Description |
-|------|-------------|
-| Recent memory files | Auto-memory files updated since last commit |
+### 4. Environment
+- Platform, shell, key environment variables
+- Git stashes (forgotten work detection)
+- Virtual environment status
+
+### 5. Claude Ecosystem
+- Recently updated auto-memory files
+- Previous session bookmark availability
 
 ## Installation
 
@@ -109,10 +120,11 @@ cd claude-compact-guard
 bash install.sh
 ```
 
-The installer will:
-1. Copy hook scripts to `~/.claude/hooks/`
-2. Create `~/.claude/compact-guard/` for snapshots
-3. Show you what to add to `~/.claude/settings.json`
+This installs:
+- 4 hook scripts to `~/.claude/hooks/`
+- 3 skills to `~/.claude/skills/`
+- 1 agent to `~/.claude/agents/`
+- Creates `~/.claude/compact-guard/` for snapshots
 
 ### Manual Setup
 
@@ -123,7 +135,7 @@ cp hooks/compact-guard-*.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/compact-guard-*.sh
 ```
 
-**2. Add PreCompact hook to `~/.claude/settings.json`:**
+**2. Add hooks to `~/.claude/settings.json`:**
 
 ```json
 {
@@ -139,14 +151,24 @@ chmod +x ~/.claude/hooks/compact-guard-*.sh
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/compact-guard-stop.sh\"",
+            "statusMessage": "Saving session bookmark..."
+          }
+        ]
+      }
     ]
   }
 }
 ```
 
 **3. Lower the compaction threshold** (recommended):
-
-Add to the `"env"` section of your settings:
 
 ```json
 {
@@ -156,121 +178,75 @@ Add to the `"env"` section of your settings:
 }
 ```
 
-This triggers compaction at 80% instead of 95%, giving more room for the recovery context.
-
 **4. Add post-compaction recovery to your SessionStart hook:**
 
-If you already have a `session-start.sh`, add this:
-
 ```bash
-# Compact Guard — post-compaction recovery
+# In your session-start.sh
 COMPACT_RECOVERY=$("$HOME/.claude/hooks/compact-guard-post.sh" 2>/dev/null || true)
 if [ -n "$COMPACT_RECOVERY" ]; then
     CTX="$CTX | $COMPACT_RECOVERY"
 fi
 ```
 
-## Configuration
+**5. Install skills and agent (optional):**
 
-All configuration is via environment variables:
+```bash
+cp skills/*.md ~/.claude/skills/
+cp agents/*.md ~/.claude/agents/
+```
+
+## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `COMPACT_GUARD_DIR` | `~/.claude/compact-guard` | Snapshot storage directory |
 | `COMPACT_GUARD_MAX_SNAPSHOTS` | `10` | Max snapshots to keep |
-| `COMPACT_GUARD_MAX_AGE` | `900` (15 min) | Max age (seconds) for recovery detection |
+| `COMPACT_GUARD_MAX_AGE` | `900` (15 min) | Max age for recovery detection |
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `95` (Claude default) | Context % to trigger compaction |
 
 ## Domain Classification
 
-Compact Guard classifies your changes by domain for quick context:
+Changes are classified for quick context:
 
-| Domain | Pattern |
-|--------|---------|
+| Domain | Patterns |
+|--------|----------|
 | `core` | `core/*`, `*/core/*` |
-| `ui` | `qml/*`, `*.qml` |
+| `src` | `src/*`, `*/src/*` |
+| `ui` | `qml/*`, `*.qml`, `ui/*`, `components/*` |
+| `build` | `CMake*`, `justfile`, `Makefile`, `*.cmake` |
 | `ci` | `.github/*`, `.gitlab-ci*` |
-| `build` | `CMake*`, `cmake*`, `justfile`, `Makefile`, `*.cmake` |
 | `docs` | `docs/*`, `*.md`, `CHANGELOG*` |
 | `scripts` | `scripts/*`, `*.py`, `*.sh` |
 | `test` | `test*/*`, `*_test.*`, `*_spec.*` |
 | `config` | `*.json`, `*.yaml`, `*.yml`, `*.toml` |
+| `infra` | `hooks/*`, `skills/*`, `agents/*`, `rules/*` |
 
-This is extensible — modify `cg_classify_file()` in `compact-guard-lib.sh` for your project structure.
+Extend `cg_classify_file()` in `compact-guard-lib.sh` for your project structure.
 
-## Snapshot Example
+## How It Compares
 
-After compaction, a snapshot looks like:
-
-```markdown
-# Compact Guard Snapshot
-
-> Comprehensive work state captured before context compaction.
-
-## Session Info
-| Field | Value |
-|-------|-------|
-| Time | 2026-03-08 14:32:15 |
-| Trigger | auto |
-| Working Dir | /c/cedra/MakineAI |
-
-## 1. Git State
-| Field | Value |
-|-------|-------|
-| Project | MakineAI |
-| Branch | feat/auth-fix |
-| Last Commit | a1b2c3d fix(core): handle empty config |
-| Uncommitted | 3 files |
-
-### Changes by Domain
-| Domain | Files |
-|--------|-------|
-| core | 2 |
-| ui | 1 |
-
-### Modified Files (git)
-core/src/auth_service.cpp
-core/include/auth_service.h
-qml/screens/LoginScreen.qml
-
-## 2. Disk State
-| Field | Value |
-|-------|-------|
-| Project Size | 1.2G |
-| Build Dir | build/dev |
-| Build State | exists |
-| Last Build | 5min ago |
-```
+| Feature | No Protection | Git-only | **Compact Guard** |
+|---------|:---:|:---:|:---:|
+| Branch & commit state | - | Yes | Yes |
+| Modified file list | - | Yes | Yes |
+| Domain classification | - | - | Yes |
+| Disk-level file changes | - | - | Yes |
+| Build artifact state | - | - | Yes |
+| Worktree awareness | - | - | Yes |
+| Environment snapshot | - | - | Yes |
+| Session bookmarks | - | - | Yes |
+| Manual checkpoints (skills) | - | - | Yes |
+| Intelligent recovery (agent) | - | - | Yes |
+| Hookify rules | - | - | Yes |
+| systemMessage injection | - | - | Yes |
+| Auto-cleanup | - | - | Yes |
+| Zero dependencies | - | Varies | Yes |
 
 ## Uninstalling
 
 ```bash
-cd claude-compact-guard
 bash uninstall.sh
 ```
-
-Then manually:
-1. Remove `PreCompact` hook from `~/.claude/settings.json`
-2. Remove `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` from settings env
-3. Remove compact-guard-post.sh call from your session-start.sh
-4. Optionally delete snapshots: `rm -rf ~/.claude/compact-guard`
-
-## How It Compares
-
-| Feature | No Protection | Git-only Handoff | **Compact Guard** |
-|---------|:---:|:---:|:---:|
-| Branch & commit state | - | Yes | Yes |
-| Modified file list | - | Yes | Yes |
-| Diff statistics | - | Partial | Yes |
-| Domain classification | - | - | Yes |
-| Disk-level file changes | - | - | Yes |
-| Build artifact state | - | - | Yes |
-| Environment snapshot | - | - | Yes |
-| Stash detection | - | - | Yes |
-| Memory file tracking | - | - | Yes |
-| Auto-cleanup | - | - | Yes |
-| Recovery injection | - | - | Yes |
-| Zero dependencies | - | Varies | Yes |
 
 ## Requirements
 
@@ -282,10 +258,12 @@ Then manually:
 
 Context compaction is inevitable. Rather than fighting it, Compact Guard embraces it:
 
-1. **Capture everything** — not just git, but the full disk and environment state
-2. **Inject into the summary** — the systemMessage survives compaction
-3. **Auto-recover** — SessionStart detects the snapshot and tells Claude to read it
-4. **Zero dependencies** — pure bash, works everywhere Claude Code runs
+1. **Capture everything** — git + disk + worktrees + environment + Claude ecosystem
+2. **Multi-layer defense** — hooks (auto) + skills (manual) + agent (intelligent)
+3. **Inject into the summary** — systemMessage survives compaction
+4. **Auto-recover** — SessionStart detects and tells Claude to read the snapshot
+5. **Session continuity** — Stop hook bookmarks for next-session awareness
+6. **Zero dependencies** — pure bash, works everywhere Claude Code runs
 
 The result: compaction becomes a **minor hiccup** instead of a **full reset**.
 
