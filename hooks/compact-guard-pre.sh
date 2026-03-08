@@ -2,7 +2,7 @@
 # compact-guard-pre.sh — PreCompact hook: comprehensive work state snapshot
 # Captures: git state, disk state, build health, worktrees, environment, Claude ecosystem
 # Pure bash, zero dependencies
-# MIT License — github.com/jlceaser/claude-compact-guard
+# MIT License — github.com/jlceaser/context-guard
 
 set -euo pipefail
 
@@ -340,7 +340,7 @@ fi
     echo '```'
     echo ""
     echo "---"
-    echo "*[Claude Compact Guard](https://github.com/jlceaser/claude-compact-guard) v${COMPACT_GUARD_VERSION}*"
+    echo "*[Context Guard](https://github.com/jlceaser/context-guard) v${COMPACT_GUARD_VERSION}*"
 
 } > "$SNAPSHOT_FILE"
 

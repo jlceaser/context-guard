@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Claude Compact Guard — Installer v2.0
+# Context Guard — Installer v2.0
 # Installs hooks, skills, agent, and configures Claude Code settings
-# MIT License — github.com/jlceaser/claude-compact-guard
+# MIT License — github.com/jlceaser/context-guard
 
 set -euo pipefail
 
@@ -12,7 +12,7 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-echo -e "${BOLD}Claude Compact Guard v2.0 — Installer${NC}"
+echo -e "${BOLD}Context Guard v2.0 — Installer${NC}"
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

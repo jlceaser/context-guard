@@ -2,7 +2,7 @@
 # compact-guard-stop.sh — Stop hook: session bookmark before exit
 # Captures what changed SINCE last snapshot, creating a delta bookmark
 # Pure bash, zero dependencies
-# MIT License — github.com/jlceaser/claude-compact-guard
+# MIT License — github.com/jlceaser/context-guard
 
 set -euo pipefail
 
@@ -120,7 +120,7 @@ fi
     fi
 
     echo "---"
-    echo "*[Claude Compact Guard](https://github.com/jlceaser/claude-compact-guard) v${COMPACT_GUARD_VERSION}*"
+    echo "*[Context Guard](https://github.com/jlceaser/context-guard) v${COMPACT_GUARD_VERSION}*"
 } > "$BOOKMARK_FILE"
 
 hook_log "CompactGuard" "bookmark" "project=$PROJECT dirty=$DIRTY file=$BOOKMARK_FILE" 2>/dev/null || true

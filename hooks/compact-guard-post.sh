@@ -2,7 +2,7 @@
 # compact-guard-post.sh — SessionStart hook addon: restore context after compaction
 # Detects recent snapshot and injects recovery path as additionalContext
 # Pure bash, zero dependencies
-# MIT License — github.com/jlceaser/claude-compact-guard
+# MIT License — github.com/jlceaser/context-guard
 
 set -euo pipefail
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Claude Compact Guard — Uninstaller v2.0
+# Context Guard — Uninstaller v2.0
 set -euo pipefail
 
-echo "Claude Compact Guard — Uninstaller"
+echo "Context Guard — Uninstaller"
 echo ""
 
 HOOKS_DST="$HOME/.claude/hooks"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# compact-guard-lib.sh — Shared functions for Claude Compact Guard
+# compact-guard-lib.sh — Shared functions for Context Guard
 # Pure bash, zero dependencies, cross-platform (Linux/macOS/Windows Git Bash)
-# MIT License — github.com/jlceaser/claude-compact-guard
+# MIT License — github.com/jlceaser/context-guard
 
 COMPACT_GUARD_VERSION="2.0.0"
 COMPACT_GUARD_DIR="${COMPACT_GUARD_DIR:-$HOME/.claude/compact-guard}"

@@ -1,0 +1,23 @@
+# Context Guard — Auto-Recovery Instructions
+
+> Add this section to your project's CLAUDE.md or global ~/.claude/CLAUDE.md
+> These instructions guide Claude to automatically recover context after compaction.
+
+## Context Compaction Recovery
+
+When context is compacted (you will see a system message about compaction):
+
+1. **Check for snapshot:** Read `~/.claude/compact-guard/latest.md` if it exists
+2. **Check for bookmark:** Read `~/.claude/compact-guard/session-bookmark.md` if it exists
+3. **Restore state:** Use the snapshot to understand:
+   - What project and branch you were working on
+   - Which files were being modified
+   - What the build state was
+   - Any uncommitted work or stashes
+4. **Continue work:** Resume from where the snapshot indicates
+
+If the snapshot mentions "Changes by Domain", pay attention to which domains (core, ui, build, etc.) had active work — this tells you what area of the codebase was being modified.
+
+If "Untracked Files" are listed, these are likely new files being created as part of in-progress work.
+
+**Important:** Do not ask the user "what were we working on?" — read the snapshot and resume automatically.
