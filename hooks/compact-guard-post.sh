@@ -23,11 +23,23 @@ if [ -f "$LATEST" ]; then
     if [ "$AGE" -lt "$COMPACT_GUARD_MAX_AGE" ]; then
         # Recent snapshot found — this is likely a post-compaction restart
 
-        # Extract key fields from snapshot for quick injection
-        PROJECT=$(grep -m1 '| Project |' "$LATEST" 2>/dev/null | sed 's/.*| //' | tr -d ' ' || echo "?")
-        BRANCH=$(grep -m1 '| Branch |' "$LATEST" 2>/dev/null | sed 's/.*| //' | tr -d ' ' || echo "?")
-        DIRTY=$(grep -m1 '| Uncommitted |' "$LATEST" 2>/dev/null | sed 's/.*| \([0-9]*\).*/\1/' || echo "0")
-        TRIGGER=$(grep -m1 '| Trigger |' "$LATEST" 2>/dev/null | sed 's/.*| //' | tr -d ' ' || echo "?")
+        # Extract key fields from snapshot (markdown table: | Key | Value |)
+        # Pattern: strip everything up to "| Key | ", then strip trailing " |"
+        cg_extract_field() {
+            local key="$1" default="$2"
+            local line
+            line=$(grep -m1 "| ${key} |" "$LATEST" 2>/dev/null || true)
+            if [ -n "$line" ]; then
+                echo "$line" | sed "s/.*| ${key} | *//;s/ *|[[:space:]]*$//"
+            else
+                echo "$default"
+            fi
+        }
+
+        PROJECT=$(cg_extract_field "Project" "?")
+        BRANCH=$(cg_extract_field "Branch" "?")
+        DIRTY=$(cg_extract_field "Uncommitted" "0" | sed 's/[^0-9].*//')
+        TRIGGER=$(cg_extract_field "Trigger" "?")
 
         RECOVERY_MSG="POST-COMPACTION RECOVERY: A context compaction just happened (${AGE}s ago, trigger=$TRIGGER). Work state preserved in snapshot. Project=$PROJECT Branch=$BRANCH Dirty=$DIRTY. Read full snapshot: $LATEST"
 
