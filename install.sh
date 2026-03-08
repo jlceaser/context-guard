@@ -96,12 +96,23 @@ done
 if [ -d "$SKILLS_SRC" ]; then
     echo ""
     echo -e "${CYAN}Skills${NC}"
+    # Plugin format: skills/skill-name/SKILL.md
+    for skill_dir in "$SKILLS_SRC"/*/; do
+        [ ! -d "$skill_dir" ] && continue
+        SKILL_NAME=$(basename "$skill_dir")
+        if [ -f "$skill_dir/SKILL.md" ]; then
+            mkdir -p "$SKILLS_DST/$SKILL_NAME"
+            cp "$skill_dir/SKILL.md" "$SKILLS_DST/$SKILL_NAME/SKILL.md"
+            echo -e "  ${GREEN}✓${NC} /$SKILL_NAME"
+        fi
+    done
+    # Legacy format: skills/*.md (fallback)
     for file in "$SKILLS_SRC"/*.md; do
         [ ! -f "$file" ] && continue
         BASENAME=$(basename "$file")
         SKILL_NAME="${BASENAME%.md}"
         cp "$file" "$SKILLS_DST/cg-${BASENAME}"
-        echo -e "  ${GREEN}✓${NC} /cg-${SKILL_NAME}"
+        echo -e "  ${GREEN}✓${NC} /cg-${SKILL_NAME} (legacy)"
     done
 fi
 

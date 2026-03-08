@@ -1,0 +1,29 @@
+{
+  "description": "Context Guard hooks — capture work state before compaction, save session bookmarks on exit",
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/compact-guard-pre.sh\"",
+            "statusMessage": "Saving work state..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/compact-guard-stop.sh\"",
+            "statusMessage": "Saving session bookmark..."
+          }
+        ]
+      }
+    ]
+  }
+}

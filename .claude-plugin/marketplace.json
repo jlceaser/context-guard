@@ -1,0 +1,33 @@
+{
+  "name": "jlceaser",
+  "owner": {
+    "name": "jlceaser",
+    "url": "https://github.com/jlceaser"
+  },
+  "metadata": {
+    "description": "Context Guard — defense in depth for Claude Code context",
+    "version": "3.0.0"
+  },
+  "plugins": [
+    {
+      "name": "context-guard",
+      "source": "./",
+      "description": "Multi-layered context preservation system. Captures git state, code diffs, build health, worktrees, and environment — automatically restores after compaction. Pure bash, zero dependencies.",
+      "version": "3.0.0",
+      "author": {
+        "name": "jlceaser"
+      },
+      "category": "productivity",
+      "keywords": [
+        "context",
+        "compaction",
+        "recovery",
+        "snapshot",
+        "hooks",
+        "session",
+        "continuity",
+        "pure-bash"
+      ]
+    }
+  ]
+}

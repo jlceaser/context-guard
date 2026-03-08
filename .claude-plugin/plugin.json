@@ -1,0 +1,22 @@
+{
+  "name": "context-guard",
+  "version": "3.0.0",
+  "description": "Defense in depth for Claude Code context. Never lose your work state to context compaction again. Pure bash, zero dependencies.",
+  "author": {
+    "name": "jlceaser",
+    "url": "https://github.com/jlceaser"
+  },
+  "homepage": "https://github.com/jlceaser/context-guard#readme",
+  "repository": "https://github.com/jlceaser/context-guard",
+  "license": "MIT",
+  "keywords": [
+    "context",
+    "compaction",
+    "recovery",
+    "snapshot",
+    "hooks",
+    "session",
+    "continuity"
+  ],
+  "skills": "./skills/"
+}

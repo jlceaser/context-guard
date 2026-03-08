@@ -44,27 +44,29 @@ After:   --- COMPACTION ---
 
 ## Quick Start
 
-**One command:**
+### Plugin Install (recommended)
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/jlceaser/context-guard/main/install.sh)
+/plugin marketplace add jlceaser/context-guard
+/plugin install context-guard@jlceaser
 ```
 
-**Or clone and install:**
+Restart Claude Code. That's it — hooks, skills, and agent are all active.
+
+### Manual Install
 
 ```bash
 git clone https://github.com/jlceaser/context-guard.git
 cd context-guard
-bash install.sh
+bash install.sh    # auto-configures settings.json via jq
+bash test.sh       # verify (31 tests)
 ```
 
-The installer auto-configures `settings.json` (requires `jq`). Verify with:
+### One-liner
 
 ```bash
-bash test.sh
+bash <(curl -sL https://raw.githubusercontent.com/jlceaser/context-guard/main/install.sh)
 ```
-
-That's it. Context Guard is now active.
 
 ---
 
@@ -203,6 +205,7 @@ Changes are automatically categorized:
 | `/cg-snapshot` | Skill | Create manual checkpoint on demand |
 | `/cg-restore` | Skill | Read and summarize latest snapshot |
 | `/cg-context-status` | Skill | System health dashboard |
+| `/cg-setup` | Skill | Initial setup and configuration |
 | `context-keeper` | Agent | Intelligent multi-snapshot recovery analysis |
 | `CLAUDE.md.template` | Template | Auto-recovery instructions for Claude |
 | `settings.json.template` | Template | Reference hook configuration |

@@ -43,11 +43,13 @@ for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh comp
     fi
 done
 
-for file in cg-snapshot.md cg-restore.md cg-context-status.md; do
-    if [ -f "$SKILLS_DIR/$file" ]; then
-        pass "Skill: $file"
+for skill in cg-snapshot cg-restore cg-context-status cg-setup; do
+    if [ -f "$SKILLS_DIR/$skill/SKILL.md" ]; then
+        pass "Skill: $skill (plugin format)"
+    elif [ -f "$SKILLS_DIR/$skill.md" ]; then
+        pass "Skill: $skill (flat format)"
     else
-        warn "Skill $file not found (optional)"
+        warn "Skill $skill not found (optional)"
     fi
 done
 
@@ -242,10 +244,69 @@ else
     pass "Post-hook: no recovery needed (expected for fresh test)"
 fi
 
-# ─── 7. Plugin Compatibility ─────────────────────────────────
+# ─── 7. Plugin Structure ─────────────────────────────────────
 
 echo ""
-echo -e "${CYAN}7. Plugin Compatibility${NC}"
+echo -e "${CYAN}7. Plugin Structure${NC}"
+
+# Check plugin manifest
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_JSON="$SCRIPT_DIR/.claude-plugin/plugin.json"
+HOOKS_JSON="$SCRIPT_DIR/.claude-plugin/hooks/hooks.json"
+MARKETPLACE_JSON="$SCRIPT_DIR/.claude-plugin/marketplace.json"
+
+if [ -f "$PLUGIN_JSON" ]; then
+    pass "plugin.json exists"
+    if command -v jq &>/dev/null && jq empty "$PLUGIN_JSON" 2>/dev/null; then
+        pass "plugin.json is valid JSON"
+        VERSION=$(jq -r '.version' "$PLUGIN_JSON" 2>/dev/null)
+        pass "Plugin version: $VERSION"
+    fi
+else
+    warn "plugin.json not found (manual install mode)"
+fi
+
+if [ -f "$HOOKS_JSON" ]; then
+    pass "hooks.json exists"
+    if command -v jq &>/dev/null && jq empty "$HOOKS_JSON" 2>/dev/null; then
+        pass "hooks.json is valid JSON"
+        HOOK_COUNT=$(jq '.hooks | keys | length' "$HOOKS_JSON" 2>/dev/null)
+        pass "Hook events: $HOOK_COUNT (PreCompact, Stop)"
+    fi
+else
+    warn "hooks.json not found"
+fi
+
+if [ -f "$MARKETPLACE_JSON" ]; then
+    pass "marketplace.json exists"
+else
+    warn "marketplace.json not found"
+fi
+
+# Check skills in plugin format
+SKILL_COUNT=0
+for skill_dir in "$SCRIPT_DIR"/skills/*/; do
+    [ -f "$skill_dir/SKILL.md" ] && SKILL_COUNT=$((SKILL_COUNT + 1))
+done
+if [ "$SKILL_COUNT" -gt 0 ]; then
+    pass "Skills in plugin format: $SKILL_COUNT"
+else
+    warn "No skills in plugin format"
+fi
+
+# Check agent format
+if [ -f "$SCRIPT_DIR/agents/context-keeper.md" ]; then
+    if head -1 "$SCRIPT_DIR/agents/context-keeper.md" | grep -q "^---" 2>/dev/null; then
+        pass "Agent has YAML frontmatter"
+    else
+        warn "Agent missing YAML frontmatter"
+    fi
+fi
+
+# ─── 8. Plugin Compatibility ─────────────────────────────────
+
+echo ""
+echo -e "${CYAN}8. Plugin Compatibility${NC}"
 
 # Check context-mode
 if grep -q "context-mode" "$SETTINGS" 2>/dev/null; then
@@ -266,10 +327,10 @@ else
     skip "hookify not installed"
 fi
 
-# ─── 8. Cross-Platform ───────────────────────────────────────
+# ─── 9. Cross-Platform ───────────────────────────────────────
 
 echo ""
-echo -e "${CYAN}8. Cross-Platform${NC}"
+echo -e "${CYAN}9. Cross-Platform${NC}"
 
 # Verify stat command works
 TMPFILE=$(mktemp)
