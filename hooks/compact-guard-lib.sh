@@ -3,10 +3,12 @@
 # Pure bash, zero dependencies, cross-platform (Linux/macOS/Windows Git Bash)
 # MIT License — github.com/jlceaser/context-guard
 
-COMPACT_GUARD_VERSION="2.0.0"
+COMPACT_GUARD_VERSION="3.0.0"
 COMPACT_GUARD_DIR="${COMPACT_GUARD_DIR:-$HOME/.claude/compact-guard}"
 COMPACT_GUARD_MAX_SNAPSHOTS="${COMPACT_GUARD_MAX_SNAPSHOTS:-10}"
 COMPACT_GUARD_MAX_AGE="${COMPACT_GUARD_MAX_AGE:-900}"  # 15 minutes
+COMPACT_GUARD_DIFF_LINES="${COMPACT_GUARD_DIFF_LINES:-40}"  # lines of diff per file
+COMPACT_GUARD_DIFF_FILES="${COMPACT_GUARD_DIFF_FILES:-8}"   # max files to diff
 
 # Ensure storage directory exists
 mkdir -p "$COMPACT_GUARD_DIR" 2>/dev/null
@@ -54,6 +56,40 @@ cg_git_diff_stat() {
     git -C "$root" diff --stat HEAD 2>/dev/null || true
 }
 
+# ─── Diff Capture ─────────────────────────────────────────────
+
+cg_git_diff_content() {
+    # Capture actual diff content for modified files (most valuable for recovery)
+    local root="${1:-$(cg_git_root)}"
+    [ -z "$root" ] && return
+
+    local max_files="$COMPACT_GUARD_DIFF_FILES"
+    local max_lines="$COMPACT_GUARD_DIFF_LINES"
+    local count=0
+
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        count=$((count + 1))
+        [ "$count" -gt "$max_files" ] && break
+
+        echo "--- $file ---"
+        git -C "$root" diff HEAD -- "$file" 2>/dev/null | head -"$max_lines"
+        echo ""
+    done < <(git -C "$root" diff --name-only HEAD 2>/dev/null)
+
+    # Also capture staged diffs
+    local staged_count=0
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        staged_count=$((staged_count + 1))
+        [ "$((count + staged_count))" -gt "$max_files" ] && break
+
+        echo "--- $file (staged) ---"
+        git -C "$root" diff --cached -- "$file" 2>/dev/null | head -"$max_lines"
+        echo ""
+    done < <(git -C "$root" diff --cached --name-only 2>/dev/null)
+}
+
 # ─── Worktree Detection ──────────────────────────────────────
 
 cg_is_worktree() {
@@ -80,20 +116,20 @@ cg_worktree_count() {
 cg_classify_file() {
     local file="$1"
     case "$file" in
-        core/*|*/core/*)           echo "core" ;;
-        src/*|*/src/*)             echo "src" ;;
-        lib/*|*/lib/*)             echo "lib" ;;
-        qml/*|*.qml)              echo "ui" ;;
-        ui/*|*/ui/*)              echo "ui" ;;
-        components/*|*/components/*) echo "ui" ;;
-        .github/*|.gitlab-ci*)    echo "ci" ;;
+        core/*|*/core/*)                echo "core" ;;
+        src/*|*/src/*)                  echo "src" ;;
+        lib/*|*/lib/*)                  echo "lib" ;;
+        qml/*|*.qml)                    echo "ui" ;;
+        ui/*|*/ui/*)                    echo "ui" ;;
+        components/*|*/components/*)    echo "ui" ;;
+        .github/*|.gitlab-ci*)          echo "ci" ;;
         CMake*|cmake*|justfile|Makefile|*.cmake) echo "build" ;;
-        docs/*|*.md|CHANGELOG*)   echo "docs" ;;
-        scripts/*|*.py|*.sh)      echo "scripts" ;;
+        docs/*|*.md|CHANGELOG*)         echo "docs" ;;
+        scripts/*|*.py|*.sh)            echo "scripts" ;;
         test*/*|*_test.*|*_spec.*|*_test/*) echo "test" ;;
-        *.json|*.yaml|*.yml|*.toml) echo "config" ;;
+        *.json|*.yaml|*.yml|*.toml)     echo "config" ;;
         hooks/*|skills/*|agents/*|rules/*) echo "infra" ;;
-        *)                         echo "other" ;;
+        *)                              echo "other" ;;
     esac
 }
 
@@ -112,6 +148,31 @@ cg_classify_changes() {
     for domain in "${!domains[@]}"; do
         echo "$domain:${domains[$domain]}"
     done | sort -t: -k2 -rn
+}
+
+# ─── Session Chain ────────────────────────────────────────────
+
+cg_session_file() {
+    echo "$COMPACT_GUARD_DIR/.session-counter"
+}
+
+cg_session_number() {
+    local file
+    file=$(cg_session_file)
+    if [ -f "$file" ]; then
+        cat "$file" 2>/dev/null || echo "1"
+    else
+        echo "1"
+    fi
+}
+
+cg_increment_session() {
+    local file current next
+    file=$(cg_session_file)
+    current=$(cg_session_number)
+    next=$((current + 1))
+    echo "$next" > "$file"
+    echo "$next"
 }
 
 # ─── Snapshot Management ─────────────────────────────────────
@@ -188,4 +249,39 @@ cg_extract_field() {
     else
         echo "$default"
     fi
+}
+
+# ─── Platform Detection ──────────────────────────────────────
+
+cg_platform() {
+    case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*)  echo "windows" ;;
+        Darwin*)                echo "macos" ;;
+        Linux*)                 echo "linux" ;;
+        *)                      echo "unknown" ;;
+    esac
+}
+
+cg_is_windows() {
+    [ "$(cg_platform)" = "windows" ]
+}
+
+# ─── Settings.json Helpers ────────────────────────────────────
+
+cg_settings_path() {
+    echo "$HOME/.claude/settings.json"
+}
+
+cg_has_hook() {
+    local hook_name="$1"
+    local settings
+    settings=$(cg_settings_path)
+    [ -f "$settings" ] && grep -q "$hook_name" "$settings" 2>/dev/null
+}
+
+cg_has_env() {
+    local var_name="$1"
+    local settings
+    settings=$(cg_settings_path)
+    [ -f "$settings" ] && grep -q "$var_name" "$settings" 2>/dev/null
 }

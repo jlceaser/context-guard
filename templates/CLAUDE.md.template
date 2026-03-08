@@ -11,12 +11,14 @@ When context is compacted (you will see a system message about compaction):
 2. **Check for bookmark:** Read `~/.claude/compact-guard/session-bookmark.md` if it exists
 3. **Restore state:** Use the snapshot to understand:
    - What project and branch you were working on
-   - Which files were being modified
+   - Which files were being modified and the actual diff content
    - What the build state was
-   - Any uncommitted work or stashes
+   - Any uncommitted work, stashes, or worktree state
 4. **Continue work:** Resume from where the snapshot indicates
 
 If the snapshot mentions "Changes by Domain", pay attention to which domains (core, ui, build, etc.) had active work — this tells you what area of the codebase was being modified.
+
+If "Diff Content" is present, read it carefully — it contains the actual code changes that were in progress.
 
 If "Untracked Files" are listed, these are likely new files being created as part of in-progress work.
 

@@ -1,0 +1,35 @@
+{
+  "// Context Guard v3.0 — Reference Configuration": "",
+  "// Add these entries to your existing settings.json": "",
+
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80"
+  },
+
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/compact-guard-pre.sh\"",
+            "statusMessage": "Saving work state..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/compact-guard-stop.sh\"",
+            "statusMessage": "Saving session bookmark..."
+          }
+        ]
+      }
+    ]
+  }
+}

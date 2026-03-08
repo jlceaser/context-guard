@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # compact-guard-pre.sh — PreCompact hook: comprehensive work state snapshot
-# Captures: git state, disk state, build health, worktrees, environment, Claude ecosystem
+# Captures: git state, diffs, disk state, build health, worktrees, environment, Claude ecosystem
 # Pure bash, zero dependencies
 # MIT License — github.com/jlceaser/context-guard
 
@@ -16,7 +16,11 @@ source "$HOME/.claude/hooks/hook-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat 2>/dev/null || echo "{}")
 TRIGGER=$(cg_json_extract "$INPUT" "trigger")
-[ -z "$TRIGGER" ] && TRIGGER="unknown"
+[ -z "$TRIGGER" ] && TRIGGER="auto"
+
+# ─── Session tracking ────────────────────────────────────────
+
+SESSION_NUM=$(cg_session_number)
 
 # ─── Gather state: GIT ───────────────────────────────────────
 
@@ -39,13 +43,16 @@ SNAPSHOT_FILE=$(cg_snapshot_path)
 # ─── Gather state: DISK ─────────────────────────────────────
 
 RECENT_DISK_FILES=""
-if [ -n "$ROOT" ] && [ -e "$ROOT/.git/HEAD" ]; then
+if [ -n "$ROOT" ] && [ -e "$ROOT/.git" ]; then
     RECENT_DISK_FILES=$(find "$ROOT" -maxdepth 4 \
         -not -path '*/build/*' \
         -not -path '*/.git/*' \
         -not -path '*/node_modules/*' \
         -not -path '*/__pycache__/*' \
         -not -path '*/vcpkg_installed/*' \
+        -not -path '*/.next/*' \
+        -not -path '*/dist/*' \
+        -not -path '*/target/*' \
         -newer "$ROOT/.git/HEAD" \
         -type f 2>/dev/null | head -30 | sed "s|$ROOT/||" || true)
 fi
@@ -56,10 +63,10 @@ BUILD_STATE="unknown"
 BUILD_DIR=""
 BUILD_AGE=""
 if [ -n "$ROOT" ]; then
-    for dir in build/dev build/debug build/release build; do
+    for dir in build/dev build/debug build/release build out dist target; do
         if [ -d "$ROOT/$dir" ]; then
             BUILD_DIR="$dir"
-            NEWEST=$(find "$ROOT/$dir" -maxdepth 2 \( -name '*.exe' -o -name '*.dll' -o -name '*.o' \) 2>/dev/null | head -1)
+            NEWEST=$(find "$ROOT/$dir" -maxdepth 2 \( -name '*.exe' -o -name '*.dll' -o -name '*.o' -o -name '*.so' -o -name '*.dylib' -o -name '*.wasm' \) 2>/dev/null | head -1)
             if [ -n "$NEWEST" ]; then
                 BUILD_STATE="exists"
                 ARTIFACT_TIME=$(stat -c %Y "$NEWEST" 2>/dev/null || stat -f %m "$NEWEST" 2>/dev/null || echo "0")
@@ -108,12 +115,14 @@ ENV_SNAPSHOT=""
 [ -n "${VCPKG_ROOT:-}" ] && ENV_SNAPSHOT="VCPKG_ROOT=$VCPKG_ROOT"
 [ -n "${CMAKE_PREFIX_PATH:-}" ] && ENV_SNAPSHOT="$ENV_SNAPSHOT CMAKE_PREFIX_PATH=set"
 [ -n "${VIRTUAL_ENV:-}" ] && ENV_SNAPSHOT="$ENV_SNAPSHOT VENV=active"
+[ -n "${NODE_ENV:-}" ] && ENV_SNAPSHOT="$ENV_SNAPSHOT NODE_ENV=$NODE_ENV"
+[ -n "${CARGO_HOME:-}" ] && ENV_SNAPSHOT="$ENV_SNAPSHOT CARGO=set"
 
 # ─── Gather state: CLAUDE ECOSYSTEM ─────────────────────────
 
 MEMORY_DIR="$HOME/.claude/projects"
 RECENT_MEMORY=""
-if [ -d "$MEMORY_DIR" ] && [ -n "$ROOT" ] && [ -e "$ROOT/.git/HEAD" ]; then
+if [ -d "$MEMORY_DIR" ] && [ -n "$ROOT" ] && [ -e "$ROOT/.git" ]; then
     RECENT_MEMORY=$(find "$MEMORY_DIR" -name "*.md" -newer "$ROOT/.git/HEAD" 2>/dev/null | head -5 | sed "s|$HOME/||" || true)
 fi
 
@@ -125,7 +134,7 @@ fi
 # ─── Write structured snapshot ───────────────────────────────
 
 {
-    echo "# Compact Guard Snapshot"
+    echo "# Context Guard Snapshot"
     echo ""
     echo "> Comprehensive work state captured before context compaction."
     echo "> Read this file after compaction to restore full working context."
@@ -135,9 +144,10 @@ fi
     echo "| Field | Value |"
     echo "|-------|-------|"
     echo "| Time | $TIMESTAMP |"
+    echo "| Session | #$SESSION_NUM |"
     echo "| Trigger | $TRIGGER |"
     echo "| Working Dir | $PWD |"
-    echo "| Compact Guard | v${COMPACT_GUARD_VERSION} |"
+    echo "| Context Guard | v${COMPACT_GUARD_VERSION} |"
     echo ""
     echo "## 1. Git State"
     echo ""
@@ -191,6 +201,22 @@ fi
             echo ""
             echo '```'
             echo "$DIFF_STAT"
+            echo '```'
+            echo ""
+        fi
+    fi
+
+    # ─── DIFF CONTENT (v3.0 — most valuable for recovery) ────
+
+    if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
+        DIFF_CONTENT=$(cg_git_diff_content "$ROOT")
+        if [ -n "$DIFF_CONTENT" ]; then
+            echo "### Diff Content (actual changes)"
+            echo ""
+            echo "First ${COMPACT_GUARD_DIFF_LINES} lines per file, max ${COMPACT_GUARD_DIFF_FILES} files."
+            echo ""
+            echo '```diff'
+            echo "$DIFF_CONTENT"
             echo '```'
             echo ""
         fi
@@ -340,7 +366,7 @@ fi
     echo '```'
     echo ""
     echo "---"
-    echo "*[Context Guard](https://github.com/jlceaser/context-guard) v${COMPACT_GUARD_VERSION}*"
+    echo "*[Context Guard](https://github.com/jlceaser/context-guard) v${COMPACT_GUARD_VERSION} — Session #${SESSION_NUM}*"
 
 } > "$SNAPSHOT_FILE"
 
@@ -357,7 +383,7 @@ if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
     DOMAIN_SUMMARY=$(cg_classify_changes "$ROOT" | head -5 | paste -sd', ' -)
 fi
 
-SYS_PARTS="COMPACT GUARD: project=$PROJECT branch=$BRANCH dirty=$DIRTY build=$BUILD_STATE trigger=$TRIGGER"
+SYS_PARTS="CONTEXT GUARD: project=$PROJECT branch=$BRANCH dirty=$DIRTY build=$BUILD_STATE trigger=$TRIGGER session=#$SESSION_NUM"
 [ -n "$LAST_COMMIT" ] && SYS_PARTS="$SYS_PARTS last=$LAST_COMMIT"
 [ -n "$DOMAIN_SUMMARY" ] && SYS_PARTS="$SYS_PARTS domains=[$DOMAIN_SUMMARY]"
 [ "$WORKTREE_COUNT" -gt 1 ] && SYS_PARTS="$SYS_PARTS worktrees=$WORKTREE_COUNT"
@@ -367,11 +393,11 @@ if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
     SYS_PARTS="$SYS_PARTS files=[$MOD_LIST]"
 fi
 
-SYS_PARTS="$SYS_PARTS | Snapshot: $SNAPSHOT_FILE"
+SYS_PARTS="$SYS_PARTS | RECOVERY: Read $SNAPSHOT_FILE for full state"
 
 SYS_MSG=$(cg_escape_json "$SYS_PARTS")
 
-hook_log "CompactGuard" "snapshot" "trigger=$TRIGGER dirty=$DIRTY build=$BUILD_STATE file=$SNAPSHOT_FILE" 2>/dev/null || true
+hook_log "ContextGuard" "snapshot" "trigger=$TRIGGER dirty=$DIRTY build=$BUILD_STATE session=#$SESSION_NUM file=$SNAPSHOT_FILE" 2>/dev/null || true
 
 echo "{\"systemMessage\":\"$SYS_MSG\"}"
 exit 0
