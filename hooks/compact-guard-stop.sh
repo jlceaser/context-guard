@@ -132,4 +132,6 @@ fi
 } > "$BOOKMARK_FILE"
 
 hook_log "ContextGuard" "bookmark" "session=#$((NEW_SESSION - 1)) project=$PROJECT dirty=$DIRTY" 2>/dev/null || true
+cg_telemetry_log "bookmark" "ok" "session=#$((NEW_SESSION - 1)) project=$PROJECT dirty=$DIRTY"
+cg_telemetry_cleanup
 exit 0

@@ -62,7 +62,37 @@ if [ -f "$HOME/.claude/plugins/installed_plugins.json" ]; then
 fi
 ```
 
-### 4. Disk Usage
+### 4. Telemetry
+
+```bash
+echo ""
+echo "=== Telemetry ==="
+source "$HOME/.claude/hooks/compact-guard-lib.sh" 2>/dev/null
+if [ -f "$COMPACT_GUARD_TELEMETRY" ]; then
+    cg_telemetry_stats
+    echo ""
+    echo "Last 5 events:"
+    tail -5 "$COMPACT_GUARD_TELEMETRY"
+else
+    echo "No telemetry data yet."
+fi
+```
+
+### 5. Active Task
+
+```bash
+echo ""
+echo "=== Active Task Detection ==="
+source "$HOME/.claude/hooks/compact-guard-lib.sh" 2>/dev/null
+TASK=$(cg_detect_active_task)
+if [ -n "$TASK" ]; then
+    echo "$TASK" | tr '|' '\n' | sed 's/^ */- /'
+else
+    echo "No active task detected (no git repo or clean state)."
+fi
+```
+
+### 6. Disk Usage
 
 ```bash
 echo ""
@@ -80,7 +110,8 @@ du -sh "$HOME/.claude/compact-guard" 2>/dev/null || echo "Dir not found"
 | PreCompact hook | OK/MISSING | |
 | Stop hook | OK/MISSING | |
 | Autocompact | {value}% | |
-| Plugin | installed/manual | |
+| Telemetry | {total events} | Success rate: {%} |
+| Active task | {detected/none} | |
 | Disk usage | {size} | |
 
 Flag any MISSING items and suggest fixes.

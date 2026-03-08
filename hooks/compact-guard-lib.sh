@@ -3,7 +3,7 @@
 # Pure bash, zero dependencies, cross-platform (Linux/macOS/Windows Git Bash)
 # MIT License — github.com/jlceaser/context-guard
 
-COMPACT_GUARD_VERSION="3.0.0"
+COMPACT_GUARD_VERSION="0.2.0"
 COMPACT_GUARD_DIR="${COMPACT_GUARD_DIR:-$HOME/.claude/compact-guard}"
 COMPACT_GUARD_MAX_SNAPSHOTS="${COMPACT_GUARD_MAX_SNAPSHOTS:-10}"
 COMPACT_GUARD_MAX_AGE="${COMPACT_GUARD_MAX_AGE:-900}"  # 15 minutes
@@ -284,4 +284,149 @@ cg_has_env() {
     local settings
     settings=$(cg_settings_path)
     [ -f "$settings" ] && grep -q "$var_name" "$settings" 2>/dev/null
+}
+
+# ─── Telemetry ───────────────────────────────────────────────
+
+COMPACT_GUARD_TELEMETRY="${COMPACT_GUARD_DIR}/telemetry.jsonl"
+
+cg_telemetry_log() {
+    # Usage: cg_telemetry_log "event_type" "status" "details"
+    # event_type: snapshot|recovery|bookmark|restore_manual
+    # status: ok|fail|skip
+    local event="$1" status="$2" details="${3:-}"
+    local ts session
+    ts=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    session=$(cg_session_number)
+    local root branch dirty
+    root=$(cg_git_root)
+    branch=$(cg_git_branch "$root")
+    dirty=$(cg_git_dirty_count "$root")
+
+    local escaped_details
+    escaped_details=$(cg_escape_json "$details")
+
+    echo "{\"ts\":\"$ts\",\"event\":\"$event\",\"status\":\"$status\",\"session\":$session,\"branch\":\"$branch\",\"dirty\":$dirty,\"details\":\"$escaped_details\"}" >> "$COMPACT_GUARD_TELEMETRY" 2>/dev/null || true
+}
+
+cg_telemetry_stats() {
+    # Output summary stats from telemetry log
+    [ ! -f "$COMPACT_GUARD_TELEMETRY" ] && echo "No telemetry data." && return
+
+    local total snapshots recoveries bookmarks snap_ok snap_fail rec_ok rec_fail
+
+    total=$(wc -l < "$COMPACT_GUARD_TELEMETRY" | tr -d ' \r\n')
+    snapshots=$(grep -c '"event":"snapshot"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | tr -d ' \r\n') || snapshots=0
+    recoveries=$(grep -c '"event":"recovery"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | tr -d ' \r\n') || recoveries=0
+    bookmarks=$(grep -c '"event":"bookmark"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | tr -d ' \r\n') || bookmarks=0
+
+    snap_ok=$(grep '"event":"snapshot".*"status":"ok"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | wc -l | tr -d ' \r\n') || snap_ok=0
+    snap_fail=$(grep '"event":"snapshot".*"status":"fail"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | wc -l | tr -d ' \r\n') || snap_fail=0
+    rec_ok=$(grep '"event":"recovery".*"status":"ok"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | wc -l | tr -d ' \r\n') || rec_ok=0
+    rec_fail=$(grep '"event":"recovery".*"status":"fail"' "$COMPACT_GUARD_TELEMETRY" 2>/dev/null | wc -l | tr -d ' \r\n') || rec_fail=0
+
+    local success_rate="N/A"
+    if [ "$snapshots" -gt 0 ] 2>/dev/null; then
+        success_rate="$(( snap_ok * 100 / snapshots ))%"
+    fi
+
+    echo "total=$total | snapshots=$snapshots ($snap_ok ok, $snap_fail fail) | recoveries=$recoveries ($rec_ok ok, $rec_fail fail) | bookmarks=$bookmarks | success=$success_rate"
+}
+
+cg_telemetry_cleanup() {
+    # Keep last 200 entries
+    [ ! -f "$COMPACT_GUARD_TELEMETRY" ] && return
+    local count
+    count=$(wc -l < "$COMPACT_GUARD_TELEMETRY" | tr -d ' ')
+    if [ "$count" -gt 200 ]; then
+        tail -200 "$COMPACT_GUARD_TELEMETRY" > "$COMPACT_GUARD_TELEMETRY.tmp"
+        mv "$COMPACT_GUARD_TELEMETRY.tmp" "$COMPACT_GUARD_TELEMETRY"
+    fi
+}
+
+# ─── Active Task Detection ───────────────────────────────────
+
+cg_detect_active_task() {
+    # Infer what the user was working on from git + file signals
+    local root="${1:-$(cg_git_root)}"
+    [ -z "$root" ] && return
+
+    local task_hints=""
+
+    # 1. Recent commit messages (last 3) — shows trajectory
+    local recent_msgs
+    recent_msgs=$(git -C "$root" log --oneline -3 --format='%s' 2>/dev/null || true)
+    if [ -n "$recent_msgs" ]; then
+        task_hints="Recent commits: $recent_msgs"
+    fi
+
+    # 2. Uncommitted changes scope — shows current focus
+    local scope
+    scope=$(cg_classify_changes "$root" | head -3 | paste -sd', ' -)
+    if [ -n "$scope" ]; then
+        task_hints="${task_hints:+$task_hints | }Active domains: $scope"
+    fi
+
+    # 3. Branch name often encodes task
+    local branch
+    branch=$(cg_git_branch "$root")
+    case "$branch" in
+        feat/*|fix/*|refactor/*|chore/*|build/*|ci/*|docs/*|test/*)
+            task_hints="${task_hints:+$task_hints | }Branch task: $branch"
+            ;;
+    esac
+
+    # 4. Check for TODO/FIXME in recent diffs
+    local todo_count
+    todo_count=$(git -C "$root" diff HEAD 2>/dev/null | grep -c '^\+.*\(TODO\|FIXME\|HACK\|XXX\)' 2>/dev/null | tr -d ' \r\n') || todo_count=0
+    if [ "$todo_count" -gt 0 ] 2>/dev/null; then
+        task_hints="${task_hints:+$task_hints | }Open TODOs in diff: $todo_count"
+    fi
+
+    echo "$task_hints"
+}
+
+# ─── Budget Zones ────────────────────────────────────────────
+
+cg_estimate_zone() {
+    # Estimate context budget zone from conversation signals
+    # Returns: GREEN|YELLOW|ORANGE|RED
+    # Heuristic: uses tool call count approximation from hook log
+    local log_file="$HOME/.claude/hooks/logs/hook-events.log"
+    local zone="GREEN"
+
+    if [ ! -f "$log_file" ]; then
+        echo "$zone"
+        return
+    fi
+
+    # Count today's tool calls as proxy for context usage
+    local today
+    today=$(date '+%Y-%m-%d')
+    local tool_calls
+    tool_calls=$(grep -c "$today" "$log_file" 2>/dev/null | tr -d ' \r\n') || tool_calls=0
+
+    # Check if compaction happened recently (strongest signal)
+    local latest_snap
+    latest_snap=$(cg_latest_snapshot)
+    if [ -n "$latest_snap" ]; then
+        local snap_age
+        snap_age=$(cg_snapshot_age "$latest_snap")
+        if [ "$snap_age" -lt 300 ] 2>/dev/null; then
+            # Compaction within 5 min = was in RED, now fresh
+            echo "GREEN"
+            return
+        fi
+    fi
+
+    # Heuristic zones based on tool call volume
+    if [ "$tool_calls" -gt 80 ] 2>/dev/null; then
+        zone="RED"
+    elif [ "$tool_calls" -gt 50 ] 2>/dev/null; then
+        zone="ORANGE"
+    elif [ "$tool_calls" -gt 30 ] 2>/dev/null; then
+        zone="YELLOW"
+    fi
+
+    echo "$zone"
 }

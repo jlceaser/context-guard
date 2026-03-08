@@ -41,6 +41,7 @@ if [ -f "$LATEST" ]; then
         RECOVERY_MSG="POST-COMPACTION RECOVERY: Context compaction happened ${AGE_FMT} ago (trigger=$TRIGGER, session=$SESSION). Project=$PROJECT Branch=$BRANCH Dirty=$DIRTY. IMPORTANT: Read $LATEST for full state restoration."
 
         hook_log "ContextGuard" "recovery" "age=${AGE_FMT} project=$PROJECT snapshot=$LATEST" 2>/dev/null || true
+        cg_telemetry_log "recovery" "ok" "age=${AGE_FMT} project=$PROJECT"
     fi
 fi
 
@@ -58,6 +59,7 @@ if [ -f "$BOOKMARK" ] && [ -z "$RECOVERY_MSG" ]; then
         RECOVERY_MSG="SESSION RESUME: Previous session ended ${BK_AGE_FMT} ago. Project=$BK_PROJECT Branch=$BK_BRANCH Dirty=$BK_DIRTY. Read $BOOKMARK for session context."
 
         hook_log "ContextGuard" "resume" "age=${BK_AGE_FMT} project=$BK_PROJECT" 2>/dev/null || true
+        cg_telemetry_log "recovery" "ok" "type=resume age=${BK_AGE_FMT}"
     fi
 fi
 

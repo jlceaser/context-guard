@@ -39,6 +39,7 @@ fi
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 SNAPSHOT_FILE=$(cg_snapshot_path)
+BUDGET_ZONE=$(cg_estimate_zone)
 
 # ─── Gather state: DISK ─────────────────────────────────────
 
@@ -148,6 +149,7 @@ fi
     echo "| Trigger | $TRIGGER |"
     echo "| Working Dir | $PWD |"
     echo "| Context Guard | v${COMPACT_GUARD_VERSION} |"
+    echo "| Budget Zone | $BUDGET_ZONE |"
     echo ""
     echo "## 1. Git State"
     echo ""
@@ -206,7 +208,22 @@ fi
         fi
     fi
 
-    # ─── DIFF CONTENT (v3.0 — most valuable for recovery) ────
+    # ─── ACTIVE TASK (v0.2.0 — what were we doing?) ──────────
+
+    ACTIVE_TASK=$(cg_detect_active_task "$ROOT")
+    if [ -n "$ACTIVE_TASK" ]; then
+        echo "## Active Task Context"
+        echo ""
+        echo "> Auto-detected from git signals. Use this to quickly resume work."
+        echo ""
+        echo "$ACTIVE_TASK" | tr '|' '\n' | while IFS= read -r hint; do
+            hint=$(echo "$hint" | sed 's/^ *//')
+            [ -n "$hint" ] && echo "- $hint"
+        done
+        echo ""
+    fi
+
+    # ─── DIFF CONTENT (most valuable for recovery) ────
 
     if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
         DIFF_CONTENT=$(cg_git_diff_content "$ROOT")
@@ -383,7 +400,7 @@ if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
     DOMAIN_SUMMARY=$(cg_classify_changes "$ROOT" | head -5 | paste -sd', ' -)
 fi
 
-SYS_PARTS="CONTEXT GUARD: project=$PROJECT branch=$BRANCH dirty=$DIRTY build=$BUILD_STATE trigger=$TRIGGER session=#$SESSION_NUM"
+SYS_PARTS="CONTEXT GUARD: project=$PROJECT branch=$BRANCH dirty=$DIRTY build=$BUILD_STATE trigger=$TRIGGER session=#$SESSION_NUM zone=$BUDGET_ZONE"
 [ -n "$LAST_COMMIT" ] && SYS_PARTS="$SYS_PARTS last=$LAST_COMMIT"
 [ -n "$DOMAIN_SUMMARY" ] && SYS_PARTS="$SYS_PARTS domains=[$DOMAIN_SUMMARY]"
 [ "$WORKTREE_COUNT" -gt 1 ] && SYS_PARTS="$SYS_PARTS worktrees=$WORKTREE_COUNT"
@@ -398,6 +415,10 @@ SYS_PARTS="$SYS_PARTS | RECOVERY: Read $SNAPSHOT_FILE for full state"
 SYS_MSG=$(cg_escape_json "$SYS_PARTS")
 
 hook_log "ContextGuard" "snapshot" "trigger=$TRIGGER dirty=$DIRTY build=$BUILD_STATE session=#$SESSION_NUM file=$SNAPSHOT_FILE" 2>/dev/null || true
+
+# Telemetry
+cg_telemetry_log "snapshot" "ok" "trigger=$TRIGGER dirty=$DIRTY build=$BUILD_STATE zone=$BUDGET_ZONE"
+cg_telemetry_cleanup
 
 echo "{\"systemMessage\":\"$SYS_MSG\"}"
 exit 0
