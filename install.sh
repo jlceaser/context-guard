@@ -13,7 +13,7 @@ CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
-VERSION="3.0.0"
+VERSION="4.0.0"
 
 echo -e "${BOLD}Context Guard v${VERSION} — Installer${NC}"
 echo ""
@@ -72,6 +72,12 @@ mkdir -p "$HOOKS_DST"
 mkdir -p "$GUARD_DIR"
 mkdir -p "$SKILLS_DST" 2>/dev/null || true
 mkdir -p "$AGENTS_DST" 2>/dev/null || true
+
+# Create annotations directory
+ANNOT_DIR="$HOME/.claude/annotations"
+mkdir -p "$ANNOT_DIR"
+echo -e "  ${GREEN}✓${NC} Created: $ANNOT_DIR"
+
 echo -e "${GREEN}✓${NC} Directories ready"
 
 # ─── Install hooks ───────────────────────────────────────────
@@ -230,7 +236,7 @@ echo -e "${GREEN}${BOLD}Installation complete!${NC}"
 echo ""
 echo "Components:"
 echo "  Hooks:  compact-guard-{lib,pre,post,stop}.sh"
-echo "  Skills: /cg-snapshot, /cg-restore, /cg-context-status"
+echo "  Skills: /cg-snapshot, /cg-restore, /cg-context-status, /cg-annotate, /cg-recall"
 echo "  Agent:  context-keeper"
 echo ""
 echo "How it works:"
@@ -245,5 +251,6 @@ echo "Verify installation:"
 echo "  bash $SCRIPT_DIR/test.sh"
 echo ""
 echo "Snapshots: $GUARD_DIR"
-echo "Skills:    /cg-snapshot  /cg-restore  /cg-context-status"
+echo "Skills:    /cg-snapshot  /cg-restore  /cg-context-status  /cg-annotate  /cg-recall"
+echo "Annotations: $ANNOT_DIR"
 echo ""

@@ -30,6 +30,7 @@ Read snapshot, session bookmark, git state, and worktree state in parallel for f
 
 ### READ (investigate)
 - `~/.claude/compact-guard/` — all snapshots, bookmarks, session counter
+- `~/.claude/annotations/` — project-scoped annotation files (use /cg-recall to load)
 - `~/.claude/projects/*/memory/` — auto-memory files
 - Any file referenced in the snapshot's "Modified Files" section
 - Git log, status, diff, stash list, worktree list in the project directory

@@ -5,6 +5,34 @@ All notable changes to Context Guard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] — 2026-03-09
+
+### Added
+- **Annotation Layer** — persistent topic-based notes that survive context compaction and session restarts, inspired by context-hub (github.com/andrewyng/context-hub)
+- **`/cg-annotate <topic> "note"`** — append a dated bullet note to a project-scoped topic file (`~/.claude/annotations/<project>/<topic>.md`)
+- **`/cg-recall <topic>`** — retrieve all annotations for a topic; lists available topics if none specified
+- **`COMPACT_GUARD_ANNOT_DIR`** — configurable annotation storage directory (default: `~/.claude/annotations/`)
+- **Annotation awareness in session-start** — auto-detects project annotation files and reports topic count on session start
+- **Pre-compact annotation reminder** — systemMessage now includes `/cg-annotate` reminder before context compaction
+- **Annotation inventory in `/cg-context-status`** — shows all annotation topics with line counts and last-modified dates
+- **Project-scoped annotations** — annotations organized by project key (e.g., `C--cedra`, `MakineAI`) for multi-project use
+
+### Changed
+- `compact-guard-lib.sh` version constant updated to `0.3.0`
+- `COMPACT_GUARD_ANNOT_DIR` constant added to lib
+- `cg-context-status` skill updated with step 7 (annotation inventory)
+- `install.sh` creates `~/.claude/annotations/` on setup and bumped to v4.0.0
+- `uninstall.sh` prompts user before removing annotations directory
+- `plugin.json` version bumped to `4.0.0`
+- `test.sh` adds annotation layer test section (section 10)
+- `context-keeper` agent now reads `~/.claude/annotations/` in tool boundaries
+- README updated with Annotation Layer documentation and v4.0.0 badge
+
+### Compatibility
+- Fully backward compatible — annotation layer is additive
+- Existing snapshots, handoffs, and hooks unaffected
+- No new dependencies (pure bash, zero deps maintained)
+
 ## [3.0.0] — 2026-03-08
 
 ### Added
@@ -75,6 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic snapshot management
 - Pure bash, zero dependencies
 
+[4.0.0]: https://github.com/jlceaser/context-guard/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/jlceaser/context-guard/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/jlceaser/context-guard/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/jlceaser/context-guard/releases/tag/v1.0.0

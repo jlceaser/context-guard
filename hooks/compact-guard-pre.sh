@@ -410,7 +410,7 @@ if [ -n "$ROOT" ] && [ "$DIRTY" -gt 0 ]; then
     SYS_PARTS="$SYS_PARTS files=[$MOD_LIST]"
 fi
 
-SYS_PARTS="$SYS_PARTS | RECOVERY: Read $SNAPSHOT_FILE for full state"
+SYS_PARTS="$SYS_PARTS | RECOVERY: Read $SNAPSHOT_FILE for full state | TIP: Use /cg-annotate <topic> to save key findings before compaction"
 
 SYS_MSG=$(cg_escape_json "$SYS_PARTS")
 

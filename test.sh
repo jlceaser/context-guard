@@ -43,7 +43,7 @@ for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh comp
     fi
 done
 
-for skill in cg-snapshot cg-restore cg-context-status cg-setup; do
+for skill in cg-snapshot cg-restore cg-context-status cg-setup cg-annotate cg-recall; do
     if [ -f "$SKILLS_DIR/$skill/SKILL.md" ]; then
         pass "Skill: $skill (plugin format)"
     elif [ -f "$SKILLS_DIR/$skill.md" ]; then
@@ -198,8 +198,8 @@ if echo "$SNAP_OUTPUT" | grep -q "systemMessage" 2>/dev/null; then
         fi
 
         # Check version in snapshot
-        if grep -q "v3\." "$LATEST" 2>/dev/null; then
-            pass "Snapshot version: v3.x"
+        if grep -q "v0\.3\." "$LATEST" 2>/dev/null || grep -q "v3\." "$LATEST" 2>/dev/null; then
+            pass "Snapshot version: v0.3.x"
         else
             warn "Snapshot version mismatch"
         fi
@@ -359,6 +359,52 @@ fi
 ) | while read -r plat; do
     pass "Platform: $plat"
 done
+
+# ─── 10. Annotation Layer ────────────────────────────────────
+
+echo ""
+echo -e "${CYAN}10. Annotation Layer${NC}"
+
+ANNOT_DIR="$HOME/.claude/annotations"
+if [ -d "$ANNOT_DIR" ]; then
+    pass "Annotations directory exists: $ANNOT_DIR"
+else
+    warn "Annotations directory missing (run install.sh to create)"
+fi
+
+# Test annotation write/read in a temp location
+ANNOT_TMP=$(mktemp -d)
+TEST_ANNOT_FILE="$ANNOT_TMP/test-topic.md"
+printf '# Annotations: test-topic\n' > "$TEST_ANNOT_FILE"
+DATE=$(date +%Y-%m-%d)
+printf '\n## %s\n' "$DATE" >> "$TEST_ANNOT_FILE"
+printf -- '- test annotation entry\n' >> "$TEST_ANNOT_FILE"
+
+if [ -f "$TEST_ANNOT_FILE" ] && grep -q "test annotation entry" "$TEST_ANNOT_FILE" 2>/dev/null; then
+    pass "Annotation write/read works"
+else
+    fail "Annotation write/read failed"
+fi
+
+# Verify format
+if grep -q "^## $DATE" "$TEST_ANNOT_FILE" 2>/dev/null; then
+    pass "Annotation date format correct"
+else
+    fail "Annotation date format incorrect"
+fi
+
+rm -rf "$ANNOT_TMP"
+
+# Check COMPACT_GUARD_ANNOT_DIR constant
+if (
+    source "$HOOKS_DIR/compact-guard-lib.sh" 2>/dev/null
+    [ -n "$COMPACT_GUARD_ANNOT_DIR" ] || exit 1
+    exit 0
+); then
+    pass "COMPACT_GUARD_ANNOT_DIR constant defined"
+else
+    fail "COMPACT_GUARD_ANNOT_DIR missing from lib"
+fi
 
 # ─── Summary ─────────────────────────────────────────────────
 

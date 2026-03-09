@@ -23,3 +23,13 @@ If "Diff Content" is present, read it carefully — it contains the actual code 
 If "Untracked Files" are listed, these are likely new files being created as part of in-progress work.
 
 **Important:** Do not ask the user "what were we working on?" — read the snapshot and resume automatically.
+
+## Annotation Layer
+
+Use `/cg-annotate <topic> "note"` to save key findings, decisions, and state across sessions.
+Use `/cg-recall <topic>` to retrieve annotations. Use `/cg-recall` to list all topics.
+
+Before compaction or at the end of important work, save findings:
+- `/cg-annotate <topic> "what was discovered or decided"`
+
+Annotations persist indefinitely and survive compaction, session restarts, and reboots.

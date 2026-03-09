@@ -59,6 +59,14 @@ done
 
 echo ""
 echo -e "${CYAN}Skills${NC}"
+# Plugin format (subdirectory)
+for skill in cg-snapshot cg-restore cg-context-status cg-setup cg-budget cg-annotate cg-recall; do
+    if [ -d "$SKILLS_DST/$skill" ]; then
+        rm -rf "$SKILLS_DST/$skill"
+        echo -e "  ${GREEN}✓${NC} Removed $skill/"
+    fi
+done
+# Legacy flat format
 for file in cg-snapshot.md cg-restore.md cg-context-status.md; do
     if [ -f "$SKILLS_DST/$file" ]; then
         rm -f "$SKILLS_DST/$file"
@@ -118,6 +126,22 @@ elif [ -d "$GUARD_DIR" ]; then
     echo -e "  ${GREEN}✓${NC} Removed $GUARD_DIR ($SNAP_COUNT snapshots)"
 else
     echo -e "  ${DIM}No data directory found${NC}"
+fi
+
+# ─── Clean annotations ───────────────────────────────────────
+
+ANNOT_DIR="$HOME/.claude/annotations"
+if [ -d "$ANNOT_DIR" ]; then
+    echo ""
+    echo -e "${CYAN}Annotations${NC}"
+    read -r -p "  Keep annotations in $ANNOT_DIR? [Y/n] " KEEP_ANNOT
+    KEEP_ANNOT="${KEEP_ANNOT:-Y}"
+    if [[ "$KEEP_ANNOT" =~ ^[Nn] ]]; then
+        rm -rf "$ANNOT_DIR"
+        echo -e "  ${GREEN}✓${NC} Removed $ANNOT_DIR"
+    else
+        echo -e "  ${DIM}Annotations kept${NC}"
+    fi
 fi
 
 echo ""

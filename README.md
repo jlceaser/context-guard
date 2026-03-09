@@ -9,7 +9,7 @@
     <a href="#requirements"><img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen.svg" alt="Zero Dependencies"></a>
     <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Shell-Bash-green.svg" alt="Shell: Bash"></a>
     <a href="https://docs.anthropic.com/en/docs/claude-code"><img src="https://img.shields.io/badge/Claude_Code-Hooks-8A2BE2.svg" alt="Claude Code"></a>
-    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-3.0.0-orange.svg" alt="v3.0.0"></a>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-4.0.0-orange.svg" alt="v4.0.0"></a>
   </p>
 </p>
 
@@ -104,6 +104,10 @@ bash <(curl -sL https://raw.githubusercontent.com/jlceaser/context-guard/main/in
 
 2. **Snapshot file** — full state with code diffs is saved to disk. Claude reads this on the next turn to restore complete context.
 
+**Annotation Layer (v4.0.0):**
+
+3. **Persistent annotations** — topic-based notes that survive everything. Save key findings with `/cg-annotate <topic> "note"`, retrieve with `/cg-recall <topic>`. Stored in `~/.claude/annotations/<project>/<topic>.md`. Inspired by [context-hub](https://github.com/andrewyng/context-hub).
+
 ---
 
 ## Architecture
@@ -126,6 +130,13 @@ Context Guard is a **5-layer defense system**:
 │  │ /cg-snapshot  │  │ /cg-restore   │  │ /cg-context-    │           │
 │  │ checkpoint    │  │ manual load   │  │ status          │           │
 │  └──────────────┘  └───────────────┘  └─────────────────┘           │
+│                                                                      │
+│  LAYER 2b: Annotation Layer (v4.0.0 — persistent knowledge)         │
+│  ┌──────────────┐  ┌───────────────┐                                 │
+│  │ /cg-annotate  │  │ /cg-recall    │                                 │
+│  │ save note to  │  │ load topic    │  ~/.claude/annotations/         │
+│  │ topic file    │  │ list topics   │  <project>/<topic>.md           │
+│  └──────────────┘  └───────────────┘                                 │
 │                                                                      │
 │  LAYER 3: Agent (intelligent)                                        │
 │  ┌──────────────────────────────────────────────────────────┐        │

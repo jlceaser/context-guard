@@ -100,6 +100,27 @@ echo "=== Disk Usage ==="
 du -sh "$HOME/.claude/compact-guard" 2>/dev/null || echo "Dir not found"
 ```
 
+### 7. Annotation Inventory
+
+```bash
+ANNOT_BASE="$HOME/.claude/annotations"
+if echo "$PWD" | grep -qi "cedra"; then PROJECT_KEY="C--cedra"; else PROJECT_KEY=$(basename "$PWD"); fi
+ANNOT_DIR="$ANNOT_BASE/$PROJECT_KEY"
+echo ""
+echo "=== Annotations ($PROJECT_KEY) ==="
+if [ -d "$ANNOT_DIR" ]; then
+  for f in "$ANNOT_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    TOPIC=$(basename "$f" .md)
+    LINES=$(wc -l < "$f" | tr -d ' ')
+    MODIFIED=$(stat -c %y "$f" 2>/dev/null | cut -d' ' -f1 || stat -f "%Sm" -t "%Y-%m-%d" "$f" 2>/dev/null)
+    echo "  $TOPIC — ${LINES} lines, last updated: $MODIFIED"
+  done
+else
+  echo "  No annotations yet. Use /cg-annotate <topic> to start."
+fi
+```
+
 ## Output Format
 
 | Check | Status | Details |
@@ -113,5 +134,6 @@ du -sh "$HOME/.claude/compact-guard" 2>/dev/null || echo "Dir not found"
 | Telemetry | {total events} | Success rate: {%} |
 | Active task | {detected/none} | |
 | Disk usage | {size} | |
+| Annotations | {count} topics | {topic list} |
 
 Flag any MISSING items and suggest fixes.
