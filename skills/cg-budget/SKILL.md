@@ -4,7 +4,7 @@ description: |
   Context budget zones and degradation detection for Context Guard.
   Trigger: "budget zone", "context budget", "am I degrading",
   "check context health", "zone status", "/cg-budget"
-version: 0.2.0
+version: 0.4.1
 user-invocable: true
 ---
 

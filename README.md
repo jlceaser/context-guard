@@ -9,7 +9,7 @@
     <a href="#requirements"><img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen.svg" alt="Zero Dependencies"></a>
     <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Shell-Bash-green.svg" alt="Shell: Bash"></a>
     <a href="https://docs.anthropic.com/en/docs/claude-code"><img src="https://img.shields.io/badge/Claude_Code-Hooks-8A2BE2.svg" alt="Claude Code"></a>
-    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-4.1.0-orange.svg" alt="v4.1.0"></a>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.4.1-orange.svg" alt="v0.4.1"></a>
   </p>
 </p>
 

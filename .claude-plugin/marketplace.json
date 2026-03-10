@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Context Guard — defense in depth for Claude Code context",
-    "version": "3.0.0"
+    "version": "0.4.1"
   },
   "plugins": [
     {
       "name": "context-guard",
       "source": "./",
       "description": "Multi-layered context preservation system. Captures git state, code diffs, build health, worktrees, and environment — automatically restores after compaction. Pure bash, zero dependencies.",
-      "version": "3.0.0",
+      "version": "0.4.1",
       "author": {
         "name": "jlceaser"
       },

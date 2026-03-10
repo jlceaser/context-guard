@@ -5,7 +5,7 @@ All notable changes to Context Guard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.1.0] — 2026-03-10
+## [0.4.1] — 2026-03-10
 
 ### Changed
 - `compact-guard-lib.sh` version constant bumped to `0.4.1`
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fully backward compatible — no new hooks or skills added
 - Existing snapshots and annotations unaffected
 
-## [4.0.0] — 2026-03-09
+## [0.4.0] — 2026-03-09
 
 ### Added
 - **Annotation Layer** — persistent topic-based notes that survive context compaction and session restarts, inspired by context-hub (github.com/andrewyng/context-hub)
@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Existing snapshots, handoffs, and hooks unaffected
 - No new dependencies (pure bash, zero deps maintained)
 
-## [3.0.0] — 2026-03-08
+## [0.3.0] — 2026-03-08
 
 ### Added
 - **Claude Code Plugin** — full `.claude-plugin/` manifest with `plugin.json`, `hooks.json`, `marketplace.json`
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Post-hook field extraction now properly handles markdown table format
 - Session counter persists across hook invocations
 
-## [2.0.0] — 2026-03-08
+## [0.2.0] — 2026-03-08
 
 ### Added
 - **5-layer architecture** — hooks + skills + agent + guidance + rules
@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Professional README with badges, architecture diagram, comparison table
 - Enhanced snapshot format with 5 sections
 
-## [1.0.0] — 2026-03-08
+## [0.1.0] — 2026-03-08
 
 ### Added
 - Initial release
@@ -116,7 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic snapshot management
 - Pure bash, zero dependencies
 
-[4.0.0]: https://github.com/jlceaser/context-guard/compare/v3.0.0...v4.0.0
-[3.0.0]: https://github.com/jlceaser/context-guard/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/jlceaser/context-guard/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/jlceaser/context-guard/releases/tag/v1.0.0
+[0.4.1]: https://github.com/jlceaser/context-guard/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/jlceaser/context-guard/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/jlceaser/context-guard/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/jlceaser/context-guard/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/jlceaser/context-guard/releases/tag/v0.1.0
