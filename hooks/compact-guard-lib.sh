@@ -3,7 +3,7 @@
 # Pure bash, zero dependencies, cross-platform (Linux/macOS/Windows Git Bash)
 # MIT License — github.com/jlceaser/context-guard
 
-COMPACT_GUARD_VERSION="0.3.0"
+COMPACT_GUARD_VERSION="0.4.1"
 COMPACT_GUARD_DIR="${COMPACT_GUARD_DIR:-$HOME/.claude/compact-guard}"
 COMPACT_GUARD_ANNOT_DIR="${COMPACT_GUARD_ANNOT_DIR:-$HOME/.claude/annotations}"
 COMPACT_GUARD_MAX_SNAPSHOTS="${COMPACT_GUARD_MAX_SNAPSHOTS:-10}"

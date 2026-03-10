@@ -5,6 +5,19 @@ All notable changes to Context Guard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] — 2026-03-10
+
+### Changed
+- `compact-guard-lib.sh` version constant bumped to `0.4.1`
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` recommended value updated to `97` — triggers compaction later, maximizing working context while pre-compact hook still saves state safely
+- `subagent-context.sh` — added per-agent chub hints (`web-dev`: `cloudflare/workers`, `ai-dev`: `anthropic/claude-api`) for hallucination prevention on external API calls
+- `subagent-context.sh` — `web-dev` and `ai-dev` agent cases added (previously fell through to default)
+- Project domain paths updated: `MakineAI-Launcher` (Qt6/C++ app) and `MakineAI` (AI/tokenizer) correctly separated
+
+### Compatibility
+- Fully backward compatible — no new hooks or skills added
+- Existing snapshots and annotations unaffected
+
 ## [4.0.0] — 2026-03-09
 
 ### Added
