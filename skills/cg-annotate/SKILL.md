@@ -46,7 +46,7 @@ ANNOT_FILE="$ANNOT_BASE/$PROJECT_KEY/${TOPIC}.md"
 mkdir -p "$(dirname "$ANNOT_FILE")"
 if [ ! -f "$ANNOT_FILE" ]; then
   printf '# Annotations: %s\n' "${TOPIC}" > "$ANNOT_FILE"
-  printf '<!-- Context Guard v0.3.0 | project: %s -->\n' "${PWD}" >> "$ANNOT_FILE"
+  printf '<!-- Context Guard v0.4.1 | project: %s -->\n' "${PWD}" >> "$ANNOT_FILE"
 fi
 ```
 

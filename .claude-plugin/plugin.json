@@ -1,6 +1,6 @@
 {
   "name": "context-guard",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Defense in depth for Claude Code context. Never lose your work state to context compaction again. Pure bash, zero dependencies.",
   "author": {
     "name": "jlceaser",

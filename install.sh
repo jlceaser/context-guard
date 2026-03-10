@@ -13,7 +13,7 @@ CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
-VERSION="4.0.0"
+VERSION="4.1.0"
 
 echo -e "${BOLD}Context Guard v${VERSION} — Installer${NC}"
 echo ""

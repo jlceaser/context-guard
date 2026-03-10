@@ -198,8 +198,8 @@ if echo "$SNAP_OUTPUT" | grep -q "systemMessage" 2>/dev/null; then
         fi
 
         # Check version in snapshot
-        if grep -q "v0\.3\." "$LATEST" 2>/dev/null || grep -q "v3\." "$LATEST" 2>/dev/null; then
-            pass "Snapshot version: v0.3.x"
+        if grep -q "v0\.4\." "$LATEST" 2>/dev/null || grep -q "v4\." "$LATEST" 2>/dev/null; then
+            pass "Snapshot version: v0.4.x"
         else
             warn "Snapshot version mismatch"
         fi
