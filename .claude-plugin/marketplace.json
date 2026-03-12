@@ -5,15 +5,15 @@
     "url": "https://github.com/jlceaser"
   },
   "metadata": {
-    "description": "Context Guard — defense in depth for Claude Code context",
-    "version": "0.4.1"
+    "description": "Context Guard — defense in depth for Claude Code context + security layer",
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "context-guard",
       "source": "./",
-      "description": "Multi-layered context preservation system. Captures git state, code diffs, build health, worktrees, and environment — automatically restores after compaction. Pure bash, zero dependencies.",
-      "version": "0.4.1",
+      "description": "Multi-layered context preservation and security system. Captures git state, code diffs, build health, worktrees, and environment — automatically restores after compaction. Security layer detects prompt injection, credential leakage, sensitive file access, and context manipulation. Pure bash, zero dependencies.",
+      "version": "0.5.0",
       "author": {
         "name": "jlceaser"
       },
@@ -26,7 +26,11 @@
         "hooks",
         "session",
         "continuity",
-        "pure-bash"
+        "pure-bash",
+        "security",
+        "prompt-injection",
+        "leakage-detection",
+        "context-security"
       ]
     }
   ]

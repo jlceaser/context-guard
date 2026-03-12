@@ -44,7 +44,7 @@ done
 # ─── Remove hooks ────────────────────────────────────────────
 
 echo -e "${CYAN}Hooks${NC}"
-for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh compact-guard-stop.sh; do
+for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh compact-guard-stop.sh context-security-lib.sh security-pre-tool.sh security-post-tool.sh; do
     if [ -f "$HOOKS_DST/$file" ]; then
         rm -f "$HOOKS_DST/$file"
         echo -e "  ${GREEN}✓${NC} Removed $file"
@@ -60,7 +60,7 @@ done
 echo ""
 echo -e "${CYAN}Skills${NC}"
 # Plugin format (subdirectory)
-for skill in cg-snapshot cg-restore cg-context-status cg-setup cg-budget cg-annotate cg-recall; do
+for skill in cg-snapshot cg-restore cg-context-status cg-setup cg-budget cg-annotate cg-recall cg-security-status cg-security-config; do
     if [ -d "$SKILLS_DST/$skill" ]; then
         rm -rf "$SKILLS_DST/$skill"
         echo -e "  ${GREEN}✓${NC} Removed $skill/"
@@ -100,6 +100,14 @@ elif command -v jq &>/dev/null; then
             .hooks.PreCompact = [.hooks.PreCompact[] | select(.hooks | all(.command | test("compact-guard") | not))]
             | if .hooks.PreCompact == [] then del(.hooks.PreCompact) else . end
         else . end
+        | if .hooks.PreToolUse then
+            .hooks.PreToolUse = [.hooks.PreToolUse[] | select(.hooks | all(.command | test("security-pre-tool") | not))]
+            | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end
+        else . end
+        | if .hooks.PostToolUse then
+            .hooks.PostToolUse = [.hooks.PostToolUse[] | select(.hooks | all(.command | test("security-post-tool") | not))]
+            | if .hooks.PostToolUse == [] then del(.hooks.PostToolUse) else . end
+        else . end
         | if .hooks.Stop then
             .hooks.Stop = [.hooks.Stop[] | .hooks = [.hooks[] | select(.command | test("compact-guard") | not)] | select(.hooks | length > 0)]
             | if .hooks.Stop == [] then del(.hooks.Stop) else . end
@@ -110,8 +118,10 @@ elif command -v jq &>/dev/null; then
 else
     echo -e "  ${YELLOW}→${NC} jq not found — manual cleanup needed:"
     echo "     1. Remove PreCompact hook entries with 'compact-guard'"
-    echo "     2. Remove Stop hook entries with 'compact-guard'"
-    echo "     3. Remove CLAUDE_AUTOCOMPACT_PCT_OVERRIDE from env"
+    echo "     2. Remove PreToolUse hook entries with 'security-pre-tool'"
+    echo "     3. Remove PostToolUse hook entries with 'security-post-tool'"
+    echo "     4. Remove Stop hook entries with 'compact-guard'"
+    echo "     5. Remove CLAUDE_AUTOCOMPACT_PCT_OVERRIDE from env"
 fi
 
 # ─── Clean snapshots ─────────────────────────────────────────
@@ -126,6 +136,18 @@ elif [ -d "$GUARD_DIR" ]; then
     echo -e "  ${GREEN}✓${NC} Removed $GUARD_DIR ($SNAP_COUNT snapshots)"
 else
     echo -e "  ${DIM}No data directory found${NC}"
+fi
+
+# ─── Clean security data ─────────────────────────────────
+
+SECURITY_DIR="$HOME/.claude/context-guard/security"
+if [ -d "$SECURITY_DIR" ]; then
+    echo ""
+    echo -e "${CYAN}Security Data${NC}"
+    SEC_EVENTS=0
+    [ -f "$SECURITY_DIR/security.jsonl" ] && SEC_EVENTS=$(wc -l < "$SECURITY_DIR/security.jsonl" 2>/dev/null | tr -d ' ')
+    rm -rf "$SECURITY_DIR"
+    echo -e "  ${GREEN}✓${NC} Removed $SECURITY_DIR ($SEC_EVENTS events)"
 fi
 
 # ─── Clean annotations ───────────────────────────────────────

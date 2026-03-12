@@ -5,6 +5,53 @@ All notable changes to Context Guard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-03-12
+
+### Added
+- **Context Security Layer** — real-time protection against prompt injection, context leakage, and unauthorized manipulation
+- **`context-security-lib.sh`** — pure bash scanning library with 4 detection engines:
+  - **Prompt Injection Scanner** — detects instruction override, identity reassignment, tag injection, system prompt extraction, jailbreak patterns (15+ patterns)
+  - **Context Leakage Scanner** — detects API keys, AWS credentials, private keys, JWT tokens, GitHub/GitLab tokens, database connection strings, Slack tokens, OpenAI/Anthropic keys (13+ patterns)
+  - **Sensitive File Guard** — blocks reads of `.env`, `.pem`, `.key`, `.pfx`, SSH keys, credential files, system paths (20+ patterns)
+  - **Context Manipulation Scanner** — detects fake system tags, instruction-like content in outputs, behavior directives, hidden markdown/HTML instructions, zero-width characters
+- **`security-pre-tool.sh`** — PreToolUse hook that scans tool inputs before execution
+  - Routes by tool type: Read (file path check), Bash (injection + exfiltration), Write/Edit (destination check), MCP (full scan)
+  - Can block or warn depending on mode
+- **`security-post-tool.sh`** — PostToolUse hook that scans tool outputs after execution
+  - Runs all 3 output scanners (injection, leakage, manipulation)
+  - Injects systemMessage warnings when threats detected
+- **3 security modes**: `warn` (default — alerts without blocking), `block` (prevents dangerous tool calls), `log` (silent audit trail)
+- **Security configuration system** — `~/.claude/context-guard/security/config.sh` with feature toggles, mode selection, scan byte limit
+- **Allowlist system** — `allowlist.txt` with `tool:pattern:reason` format for suppressing known-safe patterns
+- **Security event logging** — append-only `security.jsonl` with timestamps, event types, severity levels, tool names
+- **`/cg-security-status` skill** — security dashboard showing config, recent events, hook registration
+- **`/cg-security-config` skill** — interactive configuration management (mode, toggles, allowlist)
+- **`context-security-rules.md`** — hookify rules protecting security config and log files
+- **20+ new tests** in `test.sh` — section 11 validates all detection engines, false positive checks, config toggles, file guard, plugin structure
+
+### Changed
+- `hooks.json` — expanded from 2 to 4 hook events (added PreToolUse, PostToolUse)
+- `plugin.json` — updated description with security keywords
+- `marketplace.json` — updated description and keywords
+- `compact-guard-lib.sh` — added `COMPACT_GUARD_SECURITY_DIR` constant, version bumped to `0.5.0`
+- `install.sh` — installs security hooks, creates security directory, copies config defaults, registers PreToolUse/PostToolUse in settings.json
+- `uninstall.sh` — removes security hooks, skills, config, cleans PreToolUse/PostToolUse from settings.json
+- `test.sh` — added section 11 with comprehensive security layer validation
+- README updated with security layer documentation, new architecture diagram, and v0.5.0 badge
+
+### Architecture
+```
+Tool Call → PreToolUse → [Injection/FileGuard scan] → BLOCK/WARN/PASS
+                                                          ↓
+         Tool Executes → PostToolUse → [Injection/Leakage/Manipulation scan] → WARN/LOG
+```
+
+### Compatibility
+- Fully backward compatible — security layer is additive, default mode is `warn`
+- Existing snapshots, annotations, and hooks unaffected
+- No new dependencies (pure bash, zero deps maintained)
+- Security hooks use empty matcher (`""`) to scan all tool types
+
 ## [0.4.1] — 2026-03-10
 
 ### Changed
@@ -116,6 +163,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic snapshot management
 - Pure bash, zero dependencies
 
+[0.5.0]: https://github.com/jlceaser/context-guard/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/jlceaser/context-guard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/jlceaser/context-guard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jlceaser/context-guard/compare/v0.2.0...v0.3.0

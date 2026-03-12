@@ -1,5 +1,5 @@
 {
-  "description": "Context Guard hooks — capture work state before compaction, save session bookmarks on exit",
+  "description": "Context Guard hooks — work state preservation + context security scanning",
   "hooks": {
     "PreCompact": [
       {
@@ -9,6 +9,30 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/compact-guard-pre.sh\"",
             "statusMessage": "Saving work state..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/security-pre-tool.sh\"",
+            "statusMessage": "Security scan..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/security-post-tool.sh\"",
+            "statusMessage": "Scanning output..."
           }
         ]
       }

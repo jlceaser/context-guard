@@ -2,14 +2,15 @@
   <h1 align="center">Context Guard</h1>
   <p align="center">
     <strong>Defense in depth for Claude Code context.</strong><br>
-    Never lose your work state to context compaction again.
+    State preservation + security layer against prompt injection, leakage, and manipulation.
   </p>
   <p align="center">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
     <a href="#requirements"><img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen.svg" alt="Zero Dependencies"></a>
     <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Shell-Bash-green.svg" alt="Shell: Bash"></a>
     <a href="https://docs.anthropic.com/en/docs/claude-code"><img src="https://img.shields.io/badge/Claude_Code-Hooks-8A2BE2.svg" alt="Claude Code"></a>
-    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.4.1-orange.svg" alt="v0.4.1"></a>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.5.0-orange.svg" alt="v0.5.0"></a>
+    <a href="#context-security"><img src="https://img.shields.io/badge/Security-Layer-red.svg" alt="Security Layer"></a>
   </p>
 </p>
 
@@ -110,9 +111,70 @@ bash <(curl -sL https://raw.githubusercontent.com/jlceaser/context-guard/main/in
 
 ---
 
+## Context Security
+
+*New in v0.5.0* — Context Guard now includes a **security layer** that protects against prompt injection, credential leakage, and context manipulation.
+
+```
+Tool Call ──▶ PreToolUse Hook ──▶ [Injection / File Guard] ──▶ BLOCK / WARN / PASS
+                                                                      │
+              Tool Executes                                           ▼
+                   │
+                   ▼
+             PostToolUse Hook ──▶ [Injection / Leakage / Manipulation] ──▶ WARN / LOG
+```
+
+### 4 Detection Engines
+
+| Engine | What it detects | Example |
+|--------|----------------|---------|
+| **Injection Scanner** | Instruction override, identity reassignment, tag injection, jailbreak | `"ignore previous instructions"`, `<system>override</system>` |
+| **Leakage Scanner** | API keys, AWS credentials, private keys, JWT, tokens | `AKIA...`, `-----BEGIN RSA PRIVATE KEY-----` |
+| **File Guard** | Sensitive file reads/writes | `.env`, `.pem`, `id_rsa`, `credentials.json` |
+| **Manipulation Scanner** | Fake system tags, hidden instructions, zero-width chars | `<system-reminder>fake</system-reminder>` |
+
+### 3 Security Modes
+
+| Mode | PreToolUse | PostToolUse | Use case |
+|------|-----------|-------------|----------|
+| **`warn`** (default) | Allow + systemMessage warning | systemMessage warning | Safe for daily use |
+| **`block`** | Block dangerous calls | systemMessage warning | High-security environments |
+| **`log`** | Silent logging | Silent logging | Audit/monitoring |
+
+### Configuration
+
+```bash
+# Security config: ~/.claude/context-guard/security/config.sh
+CG_SEC_ENABLED=true           # Master switch
+CG_SEC_MODE=warn              # warn | block | log
+CG_SEC_INJECTION_SCAN=true    # Prompt injection detection
+CG_SEC_LEAKAGE_SCAN=true      # Credential leakage detection
+CG_SEC_FILE_GUARD=true        # Sensitive file protection
+CG_SEC_MANIPULATION_SCAN=true # Context manipulation detection
+CG_SEC_MAX_SCAN_BYTES=50000   # Max bytes to scan per operation
+```
+
+### Allowlist
+
+Suppress known-safe patterns in `~/.claude/context-guard/security/allowlist.txt`:
+
+```
+# Format: tool:pattern:reason
+Read:.env.example:Example env file is safe
+Bash:base64.*test:Test fixtures use base64
+*:bearer_token:Project uses bearer tokens in tests
+```
+
+### Skills
+
+- `/cg-security-status` — Security dashboard: events, config, hook registration
+- `/cg-security-config` — Manage mode, toggles, and allowlist
+
+---
+
 ## Architecture
 
-Context Guard is a **5-layer defense system**:
+Context Guard is a **6-layer defense system**:
 
 ```
 ┌─────────────────────────── Context Guard ────────────────────────────┐
@@ -150,7 +212,15 @@ Context Guard is a **5-layer defense system**:
 │  │ → Claude reads snapshot without being told to             │        │
 │  └──────────────────────────────────────────────────────────┘        │
 │                                                                      │
-│  LAYER 5: Protection (rules)                                         │
+│  LAYER 5: Security (v0.5.0 — context content protection)             │
+│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────┐           │
+│  │ PreToolUse    │  │ PostToolUse   │  │ Config +        │           │
+│  │ Injection +   │  │ Injection +   │  │ Allowlist +     │           │
+│  │ File Guard    │  │ Leakage +     │  │ Event Log       │           │
+│  │ → block/warn  │  │ Manipulation  │  │ → audit trail   │           │
+│  └──────────────┘  └───────────────┘  └─────────────────┘           │
+│                                                                      │
+│  LAYER 6: Protection (rules)                                         │
 │  ┌──────────────────────────────────────────────────────────┐        │
 │  │ Hookify rules: protect snapshots + installed hooks        │        │
 │  └──────────────────────────────────────────────────────────┘        │
@@ -213,16 +283,20 @@ Changes are automatically categorized:
 | `compact-guard-post.sh` | Hook (SessionStart) | Auto-detect compaction + inject recovery |
 | `compact-guard-stop.sh` | Hook (Stop) | Session bookmark for cross-session continuity |
 | `compact-guard-lib.sh` | Library | Shared functions (git, worktree, domain, diff, JSON) |
+| `security-pre-tool.sh` | Hook (PreToolUse) | Scan inputs for injection + sensitive file access |
+| `security-post-tool.sh` | Hook (PostToolUse) | Scan outputs for injection + leakage + manipulation |
+| `context-security-lib.sh` | Library | Security scanning functions (4 detection engines) |
 | `/cg-snapshot` | Skill | Create manual checkpoint on demand |
 | `/cg-restore` | Skill | Read and summarize latest snapshot |
 | `/cg-context-status` | Skill | System health dashboard |
 | `/cg-setup` | Skill | Initial setup and configuration |
+| `/cg-security-status` | Skill | Security dashboard: events, config, hooks |
+| `/cg-security-config` | Skill | Manage security mode, toggles, allowlist |
 | `context-keeper` | Agent | Intelligent multi-snapshot recovery analysis |
-| `CLAUDE.md.template` | Template | Auto-recovery instructions for Claude |
-| `settings.json.template` | Template | Reference hook configuration |
 | `context-health.sh` | Widget | StatusLine context health indicator |
 | `compact-guard-rules.md` | Rules | Hookify protection for snapshots/hooks |
-| `test.sh` | Test Suite | Validate installation and hook functionality |
+| `context-security-rules.md` | Rules | Hookify protection for security config/log |
+| `test.sh` | Test Suite | Validate installation, hooks, and security layer |
 
 ---
 
@@ -405,16 +479,17 @@ Options:
 
 ## Philosophy
 
-Context compaction is inevitable. Rather than fighting it, Context Guard embraces it:
+Context Guard protects both your **work state** and your **context integrity**:
 
 1. **Capture everything** — git + diffs + disk + worktrees + environment + Claude ecosystem
 2. **Inject into the summary** — systemMessage survives compaction
 3. **Auto-recover** — SessionStart detects and injects recovery context
-4. **Multi-layer defense** — hooks (auto) + skills (manual) + agent (intelligent) + guidance (passive) + rules (protective)
-5. **Session continuity** — bookmarks and session chain across multiple sessions
-6. **Zero dependencies** — pure bash, works everywhere Claude Code runs
+4. **Guard the context** — scan inputs/outputs for injection, leakage, and manipulation
+5. **Multi-layer defense** — hooks (auto) + skills (manual) + agent (intelligent) + security (active) + rules (protective)
+6. **Session continuity** — bookmarks and session chain across multiple sessions
+7. **Zero dependencies** — pure bash, works everywhere Claude Code runs
 
-The result: compaction becomes a **minor hiccup** instead of a **full reset**.
+The result: compaction becomes a **minor hiccup** and malicious content gets **flagged before it can cause harm**.
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "context-guard",
-  "version": "0.4.1",
-  "description": "Defense in depth for Claude Code context. Never lose your work state to context compaction again. Pure bash, zero dependencies.",
+  "version": "0.5.0",
+  "description": "Defense in depth for Claude Code context. State preservation across compaction + security layer against prompt injection, context leakage, and unauthorized manipulation. Pure bash, zero dependencies.",
   "author": {
     "name": "jlceaser",
     "url": "https://github.com/jlceaser"
@@ -16,7 +16,10 @@
     "snapshot",
     "hooks",
     "session",
-    "continuity"
+    "continuity",
+    "security",
+    "prompt-injection",
+    "leakage-detection"
   ],
   "skills": "./skills/"
 }

@@ -3,9 +3,10 @@
 # Pure bash, zero dependencies, cross-platform (Linux/macOS/Windows Git Bash)
 # MIT License — github.com/jlceaser/context-guard
 
-COMPACT_GUARD_VERSION="0.4.1"
+COMPACT_GUARD_VERSION="0.5.0"
 COMPACT_GUARD_DIR="${COMPACT_GUARD_DIR:-$HOME/.claude/compact-guard}"
 COMPACT_GUARD_ANNOT_DIR="${COMPACT_GUARD_ANNOT_DIR:-$HOME/.claude/annotations}"
+COMPACT_GUARD_SECURITY_DIR="${COMPACT_GUARD_SECURITY_DIR:-$HOME/.claude/context-guard/security}"
 COMPACT_GUARD_MAX_SNAPSHOTS="${COMPACT_GUARD_MAX_SNAPSHOTS:-10}"
 COMPACT_GUARD_MAX_AGE="${COMPACT_GUARD_MAX_AGE:-900}"  # 15 minutes
 COMPACT_GUARD_DIFF_LINES="${COMPACT_GUARD_DIFF_LINES:-40}"  # lines of diff per file

@@ -1,0 +1,12 @@
+# Context Guard — Security Allowlist
+# Format: tool:pattern:reason
+# Lines starting with # are comments
+#
+# Examples:
+# Read:.env.example:Example env file is safe to read
+# Bash:base64.*test:Test fixtures use base64
+# *:bearer_token:Project uses bearer tokens in test fixtures
+#
+# Wildcards:
+# - Use * as tool name to match all tools
+# - Pattern is matched with grep against the finding string

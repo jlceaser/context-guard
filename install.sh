@@ -13,7 +13,7 @@ CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
-VERSION="0.4.1"
+VERSION="0.5.0"
 
 echo -e "${BOLD}Context Guard v${VERSION} — Installer${NC}"
 echo ""
@@ -78,13 +78,18 @@ ANNOT_DIR="$HOME/.claude/annotations"
 mkdir -p "$ANNOT_DIR"
 echo -e "  ${GREEN}✓${NC} Created: $ANNOT_DIR"
 
+# Create security directory
+SECURITY_DIR="$HOME/.claude/context-guard/security"
+mkdir -p "$SECURITY_DIR"
+echo -e "  ${GREEN}✓${NC} Created: $SECURITY_DIR"
+
 echo -e "${GREEN}✓${NC} Directories ready"
 
 # ─── Install hooks ───────────────────────────────────────────
 
 echo ""
 echo -e "${CYAN}Hooks${NC}"
-for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh compact-guard-stop.sh; do
+for file in compact-guard-lib.sh compact-guard-pre.sh compact-guard-post.sh compact-guard-stop.sh context-security-lib.sh security-pre-tool.sh security-post-tool.sh; do
     if [ ! -f "$HOOKS_SRC/$file" ]; then
         continue
     fi
@@ -190,6 +195,42 @@ else
         echo -e "  ${DIM}→ PreCompact hook already configured${NC}"
     fi
 
+    # ── Add PreToolUse security hook ──
+    if ! grep -q "security-pre-tool" "$SETTINGS" 2>/dev/null; then
+        TMP=$(mktemp)
+        HOOK_OBJ='[{"matcher":"","hooks":[{"type":"command","command":"bash \"$HOME/.claude/hooks/security-pre-tool.sh\"","statusMessage":"Security scan..."}]}]'
+        jq --argjson hook "$HOOK_OBJ" '
+            .hooks = (.hooks // {}) |
+            if .hooks.PreToolUse then
+                .hooks.PreToolUse += $hook
+            else
+                .hooks.PreToolUse = $hook
+            end
+        ' "$SETTINGS" > "$TMP" && mv "$TMP" "$SETTINGS"
+        echo -e "  ${GREEN}✓${NC} Added PreToolUse security hook"
+        CHANGED=true
+    else
+        echo -e "  ${DIM}→ PreToolUse security hook already configured${NC}"
+    fi
+
+    # ── Add PostToolUse security hook ──
+    if ! grep -q "security-post-tool" "$SETTINGS" 2>/dev/null; then
+        TMP=$(mktemp)
+        HOOK_OBJ='[{"matcher":"","hooks":[{"type":"command","command":"bash \"$HOME/.claude/hooks/security-post-tool.sh\"","statusMessage":"Scanning output..."}]}]'
+        jq --argjson hook "$HOOK_OBJ" '
+            .hooks = (.hooks // {}) |
+            if .hooks.PostToolUse then
+                .hooks.PostToolUse += $hook
+            else
+                .hooks.PostToolUse = $hook
+            end
+        ' "$SETTINGS" > "$TMP" && mv "$TMP" "$SETTINGS"
+        echo -e "  ${GREEN}✓${NC} Added PostToolUse security hook"
+        CHANGED=true
+    else
+        echo -e "  ${DIM}→ PostToolUse security hook already configured${NC}"
+    fi
+
     # ── Add Stop hook ──
     if ! grep -q "compact-guard-stop" "$SETTINGS" 2>/dev/null; then
         TMP=$(mktemp)
@@ -210,6 +251,26 @@ else
 
     if [ "$CHANGED" = false ]; then
         echo -e "  ${DIM}→ All settings already configured${NC}"
+    fi
+fi
+
+# ─── Install security config defaults ────────────────────────
+
+echo ""
+echo -e "${CYAN}Security${NC}"
+CONFIG_SRC="$SCRIPT_DIR/config"
+if [ -d "$CONFIG_SRC" ]; then
+    if [ ! -f "$SECURITY_DIR/config.sh" ] || [ "$FORCE" = true ]; then
+        cp "$CONFIG_SRC/security-config.sh" "$SECURITY_DIR/config.sh"
+        echo -e "  ${GREEN}✓${NC} Security config installed"
+    else
+        echo -e "  ${DIM}→ Security config already exists (use --force to overwrite)${NC}"
+    fi
+    if [ ! -f "$SECURITY_DIR/allowlist.txt" ] || [ "$FORCE" = true ]; then
+        cp "$CONFIG_SRC/allowlist.txt" "$SECURITY_DIR/allowlist.txt"
+        echo -e "  ${GREEN}✓${NC} Allowlist installed"
+    else
+        echo -e "  ${DIM}→ Allowlist already exists${NC}"
     fi
 fi
 
@@ -236,21 +297,28 @@ echo -e "${GREEN}${BOLD}Installation complete!${NC}"
 echo ""
 echo "Components:"
 echo "  Hooks:  compact-guard-{lib,pre,post,stop}.sh"
+echo "  Hooks:  context-security-lib.sh, security-{pre,post}-tool.sh"
 echo "  Skills: /cg-snapshot, /cg-restore, /cg-context-status, /cg-annotate, /cg-recall"
+echo "  Skills: /cg-security-status, /cg-security-config"
 echo "  Agent:  context-keeper"
 echo ""
 echo "How it works:"
+echo "  Context Preservation:"
 echo "  1. Auto-compact triggers at 80% context (instead of 95%)"
 echo "  2. PreCompact hook saves structured snapshot with diffs"
 echo "  3. Stop hook saves session bookmark for next session"
 echo "  4. SessionStart detects recent snapshot and injects recovery"
-echo "  5. Claude reads snapshot to restore full work state"
-echo "  6. Use /cg-snapshot for manual checkpoints anytime"
+echo ""
+echo "  Context Security (v0.5.0):"
+echo "  5. PreToolUse hook scans inputs for injection & sensitive files"
+echo "  6. PostToolUse hook scans outputs for leakage & manipulation"
+echo "  7. Default mode: warn (alerts without blocking)"
 echo ""
 echo "Verify installation:"
 echo "  bash $SCRIPT_DIR/test.sh"
 echo ""
-echo "Snapshots: $GUARD_DIR"
-echo "Skills:    /cg-snapshot  /cg-restore  /cg-context-status  /cg-annotate  /cg-recall"
-echo "Annotations: $ANNOT_DIR"
+echo "Snapshots:    $GUARD_DIR"
+echo "Security:     $SECURITY_DIR"
+echo "Annotations:  $ANNOT_DIR"
+echo "Skills:       /cg-snapshot  /cg-restore  /cg-security-status"
 echo ""
